@@ -1,0 +1,39 @@
+# Important! Make sure this config.yml file's version setting matches the version of the plugin!
+version: "0.01"
+
+# This is where you can set the plugin's display name.
+# Default: "&f[&4Super Cmds&f] "
+pluginName: "&f[&4Super Cmds&f] "
+
+# Here you can decided whether or not you would like the plugin to back up saved player data
+# on a daily basis.
+# Default: true
+backupOnStartup: true
+
+# ================================================================================
+
+# This allows debugging messages to be sent to the console when the 
+# plugin is being used. May spam console with many messages.
+# Default: false
+showDebugMsgs: false
+
+# This is the message sent to the command sender if
+# they don't have permission to use the command they typed.
+# Default: "&4You do not have permission to use this command."
+noPermission: "&4You do not have permission to use this command."
+
+# This allows you to disable or enable this plugin's economy managing features.
+# Default: true
+handleEconomy: true
+
+# This allows you to disable or enable this plugin's chat managing features.
+# Default: true
+handleChat: true
+
+# This allows you to disable or enable this plugin's permission managing features.
+# Default: true
+handlePermissions: true
+
+# This is the /spawn location for the server. Be sure to set it in game with
+# the command /setspawn!
+spawnLocation: []

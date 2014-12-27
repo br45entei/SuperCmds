@@ -1,0 +1,96 @@
+name: SuperCmds
+prefix: "Super Cmds"
+version: "0.01"
+description: >
+  A plugin designed to make running a server easier and more fun for everyone. Made by Brian_Entei for the server at 71.8.71.109:25565.
+
+author: Brian_Entei
+website: Plugin site N/A; visit my server at redsandbox.no-ip.org:25565 for assistance or e-mail me at br45entei@gmail.com
+
+main: com.gmail.br45entei.supercmds.Main
+depend: [Vault]
+
+commands:
+  hasperm:
+    description: "Temporary testing command"
+    usage: "/hasperm {name} {perm}"
+  supercmds:
+    description: "Configuration command for this plugin."
+    usage: "/supercmds {info|save|reload}"
+  exit:
+    description: "Shorthand admin command for /save-all and /stop. Waits 10 seconds unless argument nowait is passed in."
+    usage: "/exit [nowait]"
+  uuid:
+    description: "Checks player uuids and other useful functions."
+    usage: "/uuid [playerName|printmasterlist|pml|saveall]"
+    aliases: [uuids]
+  sudo:
+    description: "Forces target player to perform a command"
+    usage: "/sudo {playerName} {command} [args...]"
+  heal:
+    description: "Heals target player."
+    usage: "/heal [playerName]"
+  setmaxhealth:
+    description: "Sets the maximum health for target player."
+    usage: "/setmaxhealth [amount] or /setmaxhealth -add [amount]"
+  thor:
+    description: "Persuade the god of thunder to aid you in your quest."
+    usage: "/thor or /thor [on|off]"
+  teleport:
+    description: "Teleport to a set of coordinates, to another player, a target player to a set of coords, or even one player to another."
+    usage: "/tp {x} {y} {z} or /tp {playerName} or /tp [playerName] {x} {y} {z} or /tp {targetName} {destinationName}"
+    aliases: [tp]
+  sethome:
+    description: "Sets your /home to your current location."
+    usage: "/sethome"
+  home:
+    description: "Teleports you to your saved home, or the server spawn if no home is saved."
+    usage: "/home"
+  back:
+    description: "Teleports you to the location you were at last before teleporting away."
+    usage: "/back"
+    aliases: [return]
+  tpa:
+    description: "Teleport request command used to ask or answer another player if you can tp to them."
+    usage: "/tpa [playerName] or /tpaccept or /tpdeny or /tpaall or /tpahere [playerName]"
+    aliases: [tpahere, tpaall, tpaccept, tpdeny]
+  god:
+    description: "Makes you invunerable when active."
+    usage: "/god"
+    aliases: [godmode]
+  fly:
+    description: "Allows you to fly in any gamemode when active, including survival."
+    usage: "/fly"
+  setspawn:
+    description: "Sets the server /spawn location to your current position."
+    usage: "/setspawn"
+  spawn:
+    description: "Teleports you to the server spawn location."
+    usage: "/spawn"
+  vanish:
+    description: "Hides you from other players."
+    usage: "/vanish"
+    aliases: [v]
+  list:
+    description: "Lists all online players."
+    usage: "/list"
+    aliases: [playerlist, listplayers]
+  gm:
+    description: "Allows you to change your gamemode. Shorthand for /gamemode."
+    usage: "/gm 0 or /gm 3 [playername]"
+    aliases: [gamemode, gms, gmc, gma, gmspec, gammedoe, gammeode]
+  say:
+    description: "Allows you to chat via command; color code enabled if you have permission."
+    usage: "/say {args...}"
+    aliases: [chat]
+  me:
+    description: "Submit a 'status update' about yourself in third person to the chat."
+    usage: "/me {args...}"
+  afk:
+    description: "Marks you as unavailable/away from keyboard."
+    usage: "/afk"
+    aliases: [awayfromkeyboard]
+  perm:
+    description: "Manage player permissions."
+    usage: "/perm {target} {add/remove} {permission.node}"
+    aliases: [permission]

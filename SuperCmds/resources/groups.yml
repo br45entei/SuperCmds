@@ -1,0 +1,45 @@
+groups:
+  default:
+    displayName: Guest
+    inheritance: ''
+    permissions:
+    - supercmds.info
+    - supercmds.use.spawn
+    - supercmds.use.say
+    - esp.info
+    - esp.cmd.use.island
+    - esp.island.menu
+  ServerHost:
+    displayName: Server Host
+    inheritance: 'default'
+    permissions:
+    - supercmds.exit
+    - supercmds.save
+    - supercmds.reload
+    - supercmds.info
+    - supercmds.use.sudo
+    - supercmds.use.heal
+    - supercmds.use.setmaxhealth
+    - supercmds.use.thor
+    - supercmds.use.teleport
+    - supercmds.use.teleport.others
+    - supercmds.use.sethome
+    - supercmds.use.home
+    - supercmds.use.back
+    - supercmds.use.tpa
+    - supercmds.use.god
+    - supercmds.use.god.others
+    - supercmds.use.fly
+    - supercmds.use.fly.others
+    - supercmds.use.setspawn
+    - supercmds.use.spawn
+    - supercmds.use.vanish
+    - supercmds.use.vanish.exempt
+    - supercmds.use.gamemode
+    - supercmds.use.gamemode.others
+    - supercmds.use.say
+    - supercmds.chat.colors
+    - supercmds.chat.colors.magic
+    - supercmds.use.me
+    - supercmds.use.permission
+

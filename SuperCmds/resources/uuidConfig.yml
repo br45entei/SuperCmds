@@ -1,0 +1,12 @@
+# Important! Make sure this config.yml file's version setting matches the version of the plugin!
+version: "0.01"
+
+# This option allows you to enable or disable automatic update checking.
+# This is currently not yet implemented!
+# Default: true
+enableAutoUpdates: true
+
+# This allows debugging messages to be sent to the console when the 
+# plugin is being used. May spam console with many messages.
+# Default: false
+showDebugMsgs: false

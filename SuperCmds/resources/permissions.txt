@@ -1,0 +1,9 @@
+supercmds.*: enables all permissions for a player/group
+supercmds.use.<cmdname>: enables given command for a player/group
+supercmds.use.<cmdname>.others: enable players to perform commands that affect other players in any way
+
+Special-case permissions:
+supercmds.use.teleport.toOthers: Allows players to teleport to other players. This is not the same as "supercmds.use.teleport.others", which would allow a player to teleport Bob to Kristie, or Kristie to a set of coords.
+supercmds.vanish.exempt: Enables a player to see all players even if they are in vanish mode.
+supercmds.chat.colors: Enables a player to use &f color codes in chat.
+supercmds.chat.colors.magic: Enables a player to use the &k color code in chat.

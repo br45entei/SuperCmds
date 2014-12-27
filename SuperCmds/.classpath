@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="src" path="resources"/>
+	<classpathentry kind="lib" path="C:/Java/Libraries/org.apache.commons/commons-io/2.4/commons-io-2.4.jar" sourcepath="C:/Java/Libraries/org.apache.commons/commons-io/2.4/commons-io-2.4-sources.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Java/Libraries/org.apache.commons/commons-io/2.4/commons-io-2.4-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Java/Libraries/org.apache.commons/commons-lang3/3.3.2/commons-lang3-3.3.2.jar" sourcepath="C:/Java/Libraries/org.apache.commons/commons-lang3/3.3.2/commons-lang3-3.3.2-sources.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Java/Libraries/org.apache.commons/commons-lang3/3.3.2/commons-lang3-3.3.2-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="C:/Java/Minecraft/Spigot_1.8_Custom_Build.jar" sourcepath="C:/Java/Minecraft/Spigot-1.8-API.jar"/>
+	<classpathentry kind="lib" path="C:/Java/Minecraft/Vault-1.5.0.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
