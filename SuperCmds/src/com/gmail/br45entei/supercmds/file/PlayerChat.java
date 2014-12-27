@@ -136,12 +136,12 @@ public class PlayerChat extends SavablePlayerData {
 	}
 	
 	public final String getDisplayName() {
-		if(!this.prefix.isEmpty() && !this.suffix.isEmpty()) {
-			return Main.formatColorCodes("&f[" + this.prefix + "&r&f] [" + this.getNickName() + "&r&f] [" + this.suffix + "&r&f]");
-		} else if(!this.prefix.isEmpty()) {
-			return Main.formatColorCodes("&f[" + this.prefix + "&r&f] [" + this.getNickName() + "&r&f]");
-		} else if(!this.suffix.isEmpty()) {
-			return Main.formatColorCodes("&f[" + this.getNickName() + "&r&f] [" + this.suffix + "&r&f]");
+		if(!this.getPrefix().isEmpty() && !this.getSuffix().isEmpty()) {
+			return Main.formatColorCodes("&f[" + this.getPrefix() + "&r&f] [" + this.getNickName() + "&r&f] [" + this.getSuffix() + "&r&f]");
+		} else if(!this.getPrefix().isEmpty()) {
+			return Main.formatColorCodes("&f[" + this.getPrefix() + "&r&f] [" + this.getNickName() + "&r&f]");
+		} else if(!this.getSuffix().isEmpty()) {
+			return Main.formatColorCodes("&f[" + this.getNickName() + "&r&f] [" + this.getSuffix() + "&r&f]");
 		} else {
 			return Main.formatColorCodes("&f[" + this.getNickName() + "&r&f]");
 		}
@@ -163,11 +163,21 @@ public class PlayerChat extends SavablePlayerData {
 			return null;
 		}
 		PlayerChat chat = PlayerChat.getPlayerChat(uuid);
-		String rtrn = chat.prefix;
+		String rtrn = chat.getPrefix();
 		if(!chat.isPlayerOnline()) {
 			chat.dispose();
 		}
 		return rtrn;
+	}
+	
+	public final String getPrefix() {
+		if(this.prefix == null || this.prefix.isEmpty()) {
+			PlayerPermissions perm = PlayerPermissions.getPlayerPermissions(this.uuid);
+			if(perm.group != null) {
+				return perm.group.displayName;
+			}
+		}
+		return(this.prefix != null ? this.prefix : "");
 	}
 	
 	public static final void setChatPrefix(Player player, String prefix) {
@@ -178,14 +188,26 @@ public class PlayerChat extends SavablePlayerData {
 	}
 	
 	public static final void setChatPrefix(UUID uuid, String prefix) {
-		if(uuid == null || prefix == null) {
+		if(uuid == null) {
 			return;
 		}
 		PlayerChat chat = PlayerChat.getPlayerChat(uuid);
-		chat.prefix = prefix;
+		chat.setChatPrefix(prefix);
 		if(!chat.isPlayerOnline()) {
 			chat.saveToFileAndDispose();
 		}
+	}
+	
+	public final boolean setChatPrefix(String prefix) {
+		if(prefix == null) {
+			prefix = "";
+		}
+		String oldPrefix = this.prefix;
+		this.prefix = prefix;
+		if(this.isPlayerOnline()) {
+			this.getPlayer().setDisplayName(this.getDisplayName());
+		}
+		return !this.prefix.equals(oldPrefix);
 	}
 	
 	public static final String getNickname(Player player) {
@@ -215,14 +237,26 @@ public class PlayerChat extends SavablePlayerData {
 	}
 	
 	public static final void setNickname(UUID uuid, String nickname) {
-		if(uuid == null || nickname == null) {
+		if(uuid == null) {
 			return;
 		}
 		PlayerChat chat = PlayerChat.getPlayerChat(uuid);
-		chat.nickname = nickname;
+		chat.setNickname(nickname);
 		if(!chat.isPlayerOnline()) {
 			chat.saveToFileAndDispose();
 		}
+	}
+	
+	public final boolean setNickname(String nickname) {
+		if(nickname == null) {
+			nickname = "";
+		}
+		String oldNick = this.nickname;
+		this.nickname = nickname;
+		if(this.isPlayerOnline()) {
+			this.getPlayer().setDisplayName(this.getDisplayName());
+		}
+		return !this.nickname.equals(oldNick);
 	}
 	
 	public static final String getChatSuffix(Player player) {
@@ -237,11 +271,15 @@ public class PlayerChat extends SavablePlayerData {
 			return null;
 		}
 		PlayerChat chat = PlayerChat.getPlayerChat(uuid);
-		String rtrn = chat.suffix;
+		String rtrn = chat.getSuffix();
 		if(!chat.isPlayerOnline()) {
 			chat.dispose();
 		}
 		return rtrn;
+	}
+	
+	public final String getSuffix() {
+		return(this.suffix != null ? this.suffix : "");
 	}
 	
 	public static final void setChatSuffix(Player player, String suffix) {
@@ -252,14 +290,26 @@ public class PlayerChat extends SavablePlayerData {
 	}
 	
 	public static final void setChatSuffix(UUID uuid, String suffix) {
-		if(uuid == null || suffix == null) {
+		if(uuid == null) {
 			return;
 		}
 		PlayerChat chat = PlayerChat.getPlayerChat(uuid);
-		chat.suffix = suffix;
+		chat.setSuffix(suffix);
 		if(!chat.isPlayerOnline()) {
 			chat.saveToFileAndDispose();
 		}
+	}
+	
+	public final boolean setSuffix(String suffix) {
+		if(suffix == null) {
+			suffix = "";
+		}
+		String oldSuffix = this.suffix;
+		this.suffix = suffix;
+		if(this.isPlayerOnline()) {
+			this.getPlayer().setDisplayName(this.getDisplayName());
+		}
+		return !this.suffix.equals(oldSuffix);
 	}
 	
 }

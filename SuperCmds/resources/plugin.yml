@@ -94,3 +94,34 @@ commands:
     description: "Manage player permissions."
     usage: "/perm {target} {add/remove} {permission.node}"
     aliases: [permission]
+  group:
+    description: "Manage server groups."
+    usage: "/group {groupName} {add|remove} {permission.node} or /group {groupName} {create|delete|info} or /group {groupName} {set} {default|displayName|inheritance} {value}"
+  money:
+    description: "View your in-game currency and/or credits."
+    usage: "/money"
+    aliases: [bal, balance, fe]
+  economy:
+    description: "Manage player balances and/or credit amounts."
+    usage: "/economy {targetName} {money|credits} {view|add|remove/subtract|set} [amount]"
+    aliases: [eco, econ]
+  speed:
+    description: "Change a player's walk/fly speed."
+    usage: "/speed {targetName} {walk|fly} {amount|reset}"
+  give:
+    description: "Give a player an item."
+    usage: "/give {targetName} {itemName} [amount] [damageValue] [metadata...]"
+  hat:
+    description: "Put the item you're holding on your head!"
+    usage: "/hat"
+  nick:
+    description: "Change your display name."
+    usage: "'/nick {args...}'. Note that there is a 16 character cut-off limit."
+    aliases: [nickname]
+  chat:
+    description: "Manage custom player prefixes, nicknames, and suffixes."
+    usage: "/chat {targetName} {prefix|nickname|suffix} {args...|clear}"
+  invsee:
+    description: "Edit and/or take a look at a player's inventory."
+    usage: "/invsee {targetName} {inv|ender/enderchest|armor/armour}"
+    aliases: [peek]

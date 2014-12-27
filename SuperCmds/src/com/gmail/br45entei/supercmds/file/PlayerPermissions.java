@@ -21,7 +21,7 @@ import com.gmail.br45entei.supercmds.yml.YamlMgmtClass;
 
 /** @author Brian_Entei */
 public class PlayerPermissions extends SavablePlayerData {
-	private static final ArrayList<PlayerPermissions>	permInstances	= new ArrayList<>();
+	protected static final ArrayList<PlayerPermissions>	permInstances	= new ArrayList<>();
 	
 	public static final ArrayList<PlayerPermissions> getInstances() {
 		return new ArrayList<>(PlayerPermissions.permInstances);
@@ -304,26 +304,52 @@ public class PlayerPermissions extends SavablePlayerData {
 		PlayerPermissions.refreshPlayerPermissions();
 	}
 	
-	public final void setPermission(String permission, boolean allowed) {
+	public final boolean setPermission(String permission, boolean allowed) {
 		if(permission == null) {
-			return;
+			return false;
 		}
-		this.permissions.remove(permission);
+		boolean didAnything = this.permissions.remove(permission);
 		if(allowed) {
-			this.permissions.add(permission);
+			didAnything = this.permissions.add(permission);
 		}
 		if(this.getAttachment() != null) {
 			this.getAttachment().setPermission(permission, allowed);
 		}
+		return didAnything;
 	}
 	
 	public static final class Group extends SavablePlayerData {
 		public static final ArrayList<Group>	groups		= new ArrayList<>();
 		public static YamlConfiguration			config;
 		
+		public boolean							isDefault;
 		public String							displayName;
 		public Group							inheritance;
 		public final ArrayList<String>			permissions	= new ArrayList<>();
+		
+		@Override
+		public final String toString() {
+			String rtrn = "&3Group \"&3" + this.name + "&r&3\":\n" + //
+			"Default Group: &e" + this.isDefault + "&3\n" + //
+			"Display Name: \"&f" + this.displayName + "&r&3\"\n" + //
+			"Inherited Group: &e" + (this.inheritance != null ? this.inheritance.name : "null") + "&3\n" + //
+			"Total number of permissions: &e" + this.getAllPermissions().size();
+			return Main.formatColorCodes(rtrn);
+		}
+		
+		public final boolean setDefault(boolean isDefault) {
+			for(Group group : new ArrayList<>(Group.groups)) {
+				if(group != this) {
+					if(group.isDefault) {
+						return false;
+					}
+				}
+			}
+			boolean wasDefault = this.isDefault;
+			this.isDefault = isDefault;
+			PlayerPermissions.refreshPlayerPermissions();
+			return(wasDefault != this.isDefault);
+		}
 		
 		public final ArrayList<String> getAllPermissions() {
 			ArrayList<String> rtrn = new ArrayList<>();
@@ -432,6 +458,21 @@ public class PlayerPermissions extends SavablePlayerData {
 			}
 		}
 		
+		public static final Group createGroup(String groupName) {
+			Group rtrn = Group.getGroupByName(groupName);
+			if(rtrn != null) {
+				return rtrn;
+			}
+			ConfigurationSection memSection = Group.getConfig().getConfigurationSection("groups");
+			if(memSection == null) {
+				memSection = Group.getConfig().createSection("groups");
+			}
+			rtrn = new Group(groupName, memSection);
+			rtrn.displayName = "&f" + Main.capitalizeFirstLetter(rtrn.name);
+			memSection = null;
+			return rtrn;
+		}
+		
 		public static final Group getGroupByName(String name) {
 			if(name == null || name.isEmpty()) {
 				return null;
@@ -468,7 +509,11 @@ public class PlayerPermissions extends SavablePlayerData {
 			ConfigurationSection group = mem.getConfigurationSection(this.name);
 			if(group != null) {
 				Main.sendConsoleMessage(Main.pluginName + "&aLoading group \"&f" + this.name + "&r&a\" from groups.yml file...");
+				this.setDefault(group.getBoolean("isDefault"));
 				this.displayName = group.getString("displayName");
+				if(this.displayName == null || this.displayName.isEmpty()) {
+					this.displayName = "&f" + Main.capitalizeFirstLetter(this.name);
+				}
 				this.inheritance = Group.getGroupByName(group.getString("inheritance"));
 				if(group.getStringList("permissions") == null) {
 					group.set("permissions", this.permissions);
@@ -492,7 +537,9 @@ public class PlayerPermissions extends SavablePlayerData {
 				group = mem.createSection(this.name);
 			}
 			Main.sendConsoleMessage(Main.pluginName + "&aSaving group \"&f" + this.name + "&r&a\" to groups.yml file...");
+			group.set("isDefault", new Boolean(this.isDefault));
 			group.set("displayName", this.displayName);
+			group.set("inheritance", (this.inheritance != null ? this.inheritance.name : ""));
 			group.set("permissions", this.permissions);
 		}
 		
@@ -513,15 +560,36 @@ public class PlayerPermissions extends SavablePlayerData {
 			//
 		}
 		
-		public final void setPermission(String permission, boolean allowed) {
-			if(permission == null) {
-				return;
+		public final boolean setDisplayName(String newDisplayName) {
+			if(newDisplayName == null || newDisplayName.isEmpty()) {
+				return false;
 			}
-			this.permissions.remove(permission);
+			String oldDisplayName = this.displayName;
+			this.displayName = newDisplayName;
+			this.saveToFile();
+			return !this.displayName.equals(oldDisplayName);
+		}
+		
+		public final boolean setPermission(String permission, boolean allowed) {
+			if(permission == null) {
+				return false;
+			}
+			boolean didAnything = this.permissions.remove(permission);
 			if(allowed) {
-				this.permissions.add(permission);
+				didAnything = this.permissions.add(permission);
 			}
 			PlayerPermissions.refreshPlayerPermissions();
+			return didAnything;
+		}
+		
+		public final boolean setInheritance(Group group) {
+			Group oldInheritance = this.inheritance;
+			if(group == this) {
+				group = oldInheritance;
+			}
+			this.inheritance = group;
+			PlayerPermissions.refreshPlayerPermissions();
+			return this.inheritance != oldInheritance;
 		}
 		
 		public static final void disposeAll() {
@@ -534,8 +602,26 @@ public class PlayerPermissions extends SavablePlayerData {
 		
 		@Override
 		public void dispose() {
+			for(PlayerPermissions perm : new ArrayList<>(PlayerPermissions.permInstances)) {
+				if(perm.group == this) {
+					perm.changeGroup(null);
+				}
+			}
+			for(Group group : new ArrayList<>(Group.groups)) {
+				if(group != this && group != null) {
+					if(group.inheritance == this) {
+						group.setInheritance(null);
+					}
+				}
+			}
 			super.dispose();
 			Group.groups.remove(this);
+			Main.scheduler.scheduleSyncDelayedTask(Main.getInstance(), new Runnable() {
+				@Override
+				public void run() {
+					PlayerPermissions.refreshPlayerPermissions();
+				}
+			});
 		}
 		
 	}

@@ -921,28 +921,43 @@ public final strictfp class MainCmdListener implements Listener {
 				return true;
 			}
 			if(args.length == 3) {
-				Player target = Main.getPlayer(args[0]);
-				if(target == null) {
-					Main.sendMessage(sender, MainCmdListener.getNoPlayerMsg(args[0]));
-					return true;
-				}
-				String flag = args[1];
-				String arg3 = args[2];
-				PlayerPermissions perms = PlayerPermissions.getPlayerPermissions(target);
-				if(flag.equalsIgnoreCase("add")) {
-					perms.setPermission(arg3, true);
-				} else if(flag.equalsIgnoreCase("remove")) {
-					perms.setPermission(arg3, false);
-				} else if(flag.equalsIgnoreCase("setgroup")) {
-					Group group = Group.getGroupByName(arg3);
-					if(group != null) {
-						perms.group = group;
-						perms.reloadFromConfigAndSaveToFile();
-					} else {
+				UUID uuid = Main.uuidMasterList.getUUIDFromPlayerName(args[0]);
+				if(uuid != null) {
+					String targetName = Main.uuidMasterList.getPlayerNameFromUUID(uuid);
+					String flag = args[1];
+					String arg3 = args[2];
+					PlayerPermissions perms = PlayerPermissions.getPlayerPermissions(uuid);
+					if(flag.equalsIgnoreCase("add")) {
+						if(perms.setPermission(arg3, true)) {
+							Main.sendMessage(sender, Main.pluginName + "&aThe command completed successfully.");
+							return true;
+						}
+						Main.sendMessage(sender, Main.pluginName + "&eSomething went wrong when adding the permission \"&f" + arg3 + "&r&e\" to the player \"&f" + targetName + "&r&e\"!&z&aPerhaps they already have that permission?");
+						return true;
+					} else if(flag.equalsIgnoreCase("remove")) {
+						if(perms.setPermission(arg3, false)) {
+							Main.sendMessage(sender, Main.pluginName + "&aThe command completed successfully.");
+							return true;
+						}
+						Main.sendMessage(sender, Main.pluginName + "&eSomething went wrong when removing the permission \"&f" + arg3 + "&r&e\" from the player \"&f" + targetName + "&r&e\"!&z&aPerhaps it was never added?");
+						return true;
+					} else if(flag.equalsIgnoreCase("setgroup")) {
+						Group group = Group.getGroupByName(arg3);
+						if(group != null) {
+							if(perms.changeGroup(group)) {
+								Main.sendMessage(sender, Main.pluginName + "&aThe command completed successfully.");
+								return true;
+							}
+							Main.sendMessage(sender, Main.pluginName + "&eSomething went wrong when changing the player \"&f" + targetName + "&r&e\"'s group to \"&f" + group.displayName + "&r&e\"!");
+							return true;
+						}
 						Main.sendMessage(sender, Main.pluginName + "&eThe group \"&f" + flag + "&r&e\" does not exist.&z&aCreate it using &f/group&a!");
+						return true;
+					} else {
+						Main.sendMessage(sender, Main.pluginName + "&eInvalid flag \"&f" + flag + "&r&e\".");
 					}
 				} else {
-					Main.sendMessage(sender, Main.pluginName + "&eInvalid flag \"&f" + flag + "&r&e\".");
+					Main.sendMessage(sender, MainCmdListener.getNoPlayerMsg(args[0]));
 				}
 			}
 			Main.sendMessage(sender, Main.pluginName + "&eUsage: \"&f/" + command + " {target} {add|remove|setgroup} {permission.node|groupName}&e\"");
@@ -952,30 +967,144 @@ public final strictfp class MainCmdListener implements Listener {
 				Main.sendMessage(sender, Main.pluginName + Main.noPerm);
 				return true;
 			}
-			if(args.length == 3) {
-				Player target = Main.getPlayer(args[0]);
-				if(target == null) {
-					Main.sendMessage(sender, MainCmdListener.getNoPlayerMsg(args[0]));
+			if(args.length == 1) {//XXX /group list
+				if(args[0].equalsIgnoreCase("list")) {
+					//TODO list all group.displayName names then their group.name name in parenthesis.
 					return true;
 				}
-				
+				Main.sendMessage(sender, Main.pluginName + "&eInvalid flag \"&f" + args[0] + "&r&e\".");
+			} else if(args.length == 2) {//XXX /group {groupName} {create|delete|info}
+				String groupName = args[0];
+				String createDeleteInfo = args[1];
+				Group check = Group.getGroupByName(groupName);
+				if(createDeleteInfo.equalsIgnoreCase("create")) {
+					if(check != null) {
+						Main.sendMessage(sender, Main.pluginName + "&eThe group \"&f" + check.name + "&r&e\" already exists!");
+						return true;
+					}
+					Group group = Group.createGroup(groupName);
+					if(group != null) {
+						Main.sendMessage(sender, Main.pluginName + "&aSuccessfully created the group \"&f" + group.name + "&r&a\"!&z&aThe group's display name was set to: \"&f" + group.displayName + "&r&a\".");
+					}
+					Main.sendMessage(sender, Main.pluginName + "&eSomething went wrong when attempting to create the group \"&f" + groupName + "&r&e\".&z&ePlease contact a server administrator about this issue.(Maybe the server needs to be restarted?)");
+					return true;
+				} else if(createDeleteInfo.equalsIgnoreCase("delete") || createDeleteInfo.equalsIgnoreCase("del")) {
+					Group group = Group.getGroupByName(groupName);
+					if(group != null) {
+						group.dispose();
+						group = null;
+						Main.sendMessage(sender, Main.pluginName + "&aThe command completed successfully.");
+						return true;
+					}
+					Main.sendMessage(sender, Main.pluginName + "&eThe group \"&f" + groupName + "&r&e\" does not exist.&z&aPerhaps it was already deleted?");
+					return true;
+				} else if(createDeleteInfo.equalsIgnoreCase("info")) {
+					if(check != null) {
+						Main.sendMessage(sender, Main.pluginName + "&aDisplaying group information:&z&f" + check.toString());
+						return true;
+					}
+					Main.sendMessage(sender, Main.pluginName + "&eThe group \"&f" + groupName + "&r&e\" does not exist.");
+				} else {
+					Main.sendMessage(sender, Main.pluginName + "&eInvalid flag \"&f" + createDeleteInfo + "&r&e\".");
+				}
+			} else if(args.length == 3) {//XXX /group {groupName} {add|remove} {permission.node}
+				String groupName = args[0];
+				String addRemove = args[1];
+				String permNode = args[2];
+				Group group = Group.getGroupByName(groupName);
+				if(group != null) {
+					if(addRemove.equalsIgnoreCase("add")) {
+						if(group.setPermission(permNode, true)) {
+							Main.sendMessage(sender, Main.pluginName + "&aThe command completed successfully.");
+							return true;
+						}
+						Main.sendMessage(sender, Main.pluginName + "&eSomething went wrong when adding the permission \"&f" + permNode + "&r&e\" to the group \"&f" + group.displayName + "&r&e\"!&z&aIs it already added?");
+					} else if(addRemove.equalsIgnoreCase("remove")) {
+						if(group.setPermission(permNode, false)) {
+							Main.sendMessage(sender, Main.pluginName + "&aThe command completed successfully.");
+							return true;
+						}
+						Main.sendMessage(sender, Main.pluginName + "&eSomething went wrong when removing the permission \"&f" + permNode + "&r&e\" to the group \"&f" + group.displayName + "&r&e\"!&z&aWas it already removed?");
+					} else {
+						Main.sendMessage(sender, Main.pluginName + "&eInvalid flag \"&f" + addRemove + "&r&e\".");
+					}
+				} else {
+					Main.sendMessage(sender, Main.pluginName + "&eThe group \"&f" + groupName + "&r&e\" does not exist.");
+				}
+			} else if(args.length == 4) {//XXX /group {groupName} {set} {default|displayName|inheritance} {value}
+				String groupName = args[0];
+				String flag = args[1];//this might be unnecessary, but meh.
+				String defaultDispInher = args[2];
+				String value = args[3];
+				Group group = Group.getGroupByName(groupName);
+				if(group != null) {
+					if(flag.equalsIgnoreCase("set")) {
+						if(defaultDispInher.equalsIgnoreCase("default")) {
+							Boolean val = value.equalsIgnoreCase("true") ? Boolean.TRUE : (value.equalsIgnoreCase("false") ? Boolean.FALSE : null);
+							if(val != null) {
+								boolean isDefault = val.booleanValue();
+								if(group.setDefault(isDefault)) {
+									Main.sendMessage(sender, Main.pluginName + "&aThe command completed successfully.");
+								} else {
+									Main.sendMessage(sender, Main.pluginName + "&eSomething went wrong when setting the group \"&f" + group.name + "&r&e\" as the default group!&z&ePerhaps there is already a default group?");
+								}
+								return true;
+							}
+							Main.sendMessage(sender, Main.pluginName + "&eInvalid value \"&f" + value + "&r&e\".");
+						} else if(defaultDispInher.equalsIgnoreCase("displayname")) {
+							if(group.setDisplayName(value)) {
+								Main.sendMessage(sender, Main.pluginName + "&aThe command completed successfully.");
+							} else {
+								Main.sendMessage(sender, Main.pluginName + "&eSomething went wrong when changing the display name of the group \"&f" + group.name + "&r&e\" to \"&f" + value + "&r&e\"!&z&aPerhaps the old display name is the same as the new one?");
+							}
+							return true;
+						} else if(defaultDispInher.equalsIgnoreCase("inheritance")) {
+							Group newInheritance = Group.getGroupByName(value);
+							if(newInheritance != null) {
+								if(group.setInheritance(newInheritance)) {
+									Main.sendMessage(sender, Main.pluginName + "&aThe command completed successfully.");
+									return true;
+								}
+								Main.sendMessage(sender, Main.pluginName + "&eSomething went wrong when setting the group \"&f" + group.name + "&r&e\"'s inheritance group to \"&f&r&e\"!&z&aPerhaps it was already set to that group?&z&a(Note: you can't set a group as it's own inheritance group.)");
+								return true;
+							}
+							Main.sendMessage(sender, Main.pluginName + "&eThe group \"&f" + value + "&r&e\" does not exist.");
+						} else {
+							Main.sendMessage(sender, Main.pluginName + "&eInvalid flag \"&f" + defaultDispInher + "&r&e\".");
+						}
+					} else {
+						Main.sendMessage(sender, Main.pluginName + "&eInvalid flag \"&f" + flag + "&r&e\".");
+					}
+				} else {
+					Main.sendMessage(sender, Main.pluginName + "&eThe group \"&f" + groupName + "&r&e\" does not exist.");
+				}
 			}
+			Main.sendMessage(sender, Main.pluginName + "&eUsage: \"&f/" + command + " {groupName} {add|remove} {permission.node}&e\" or&z&e\"&f/" + command + " {groupName} {create|delete|info}&e\" or&z&e\"&f/" + command + " {groupName} {set} {default|displayName|inheritance} {value}&e\"");
 			return true;
 		} else if(command.equalsIgnoreCase("bal") || command.equalsIgnoreCase("balance") || command.equalsIgnoreCase("money") || command.equalsIgnoreCase("fe")) {
-			//TODO Economy cmds
-			return true;
+			//TODO Economy cmds; requires permission
+			return false;
 		} else if(command.equalsIgnoreCase("eco") || command.equalsIgnoreCase("econ") || command.equalsIgnoreCase("economy")) {
-			//TODO Economy cmds
-			return true;
+			//TODO Economy cmds; requires permission
+			return false;
 		} else if(command.equalsIgnoreCase("speed")) {
-			//TODO Player fly/walk speed
-			return true;
+			//TODO Player fly/walk speed; requires permission
+			return false;
 		} else if(command.equalsIgnoreCase("give")) {
-			//TODO bukkit /give command
-			return true;
+			//TODO bukkit /give command; requires permission
+			return false;
 		} else if(command.equalsIgnoreCase("hat")) {
 			//TODO Player command for putting held item on head armour slot; requires permission
-			return true;
+			return false;
+		} else if(command.equalsIgnoreCase("nick")) {
+			//TODO Player command for changing their nicknames; requires permission
+			return false;
+		} else if(command.equalsIgnoreCase("chat")) {
+			//TODO Admin command for managing player prefixes, nicknames, and suffixes; requires permission
+			return false;
+		} else if(command.equalsIgnoreCase("invsee") || command.equalsIgnoreCase("peek")) {
+			//TODO Admin command for looking at and/or editing other player's inventories; requires permission
+			return false;
 		} else {
 			return false;
 		}
