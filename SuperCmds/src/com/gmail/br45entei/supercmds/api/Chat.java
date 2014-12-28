@@ -46,7 +46,7 @@ public class Chat implements Listener {
 				msg = Main.formatColorCodes(msg, false);
 			}
 		}
-		event.setFormat(chat.getChatFormat() + msg);
+		event.setFormat(String.format(PlayerChat.getChatFormat() + msg, chat.getDisplayName()));
 	}
 	
 }

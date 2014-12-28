@@ -110,6 +110,9 @@ public class UUIDMasterList implements Listener {
 	}
 	
 	public String getPlayerNameFromUUID(UUID uuid) {
+		if(uuid == null) {
+			return "";
+		}
 		return this.getPlayerNameFromUUID(uuid.toString());
 	}
 	
@@ -170,7 +173,23 @@ public class UUIDMasterList implements Listener {
 		return playerEntry[1];
 	}
 	
+	public static final boolean isStrUUID(String str) {
+		try {
+			UUID.fromString(str);
+			return true;
+		} catch(Throwable ignored) {
+			return false;
+		}
+	}
+	
 	public UUID getUUIDFromPlayerName(String playerName) {
+		if(UUIDMasterList.isStrUUID(playerName)) {
+			for(String[] curEntry : this.uuidMasterList) {
+				if(curEntry[0].equals(playerName)) {
+					return UUID.fromString(playerName);
+				}
+			}
+		}
 		for(String[] curEntry : this.uuidMasterList) {
 			if(curEntry[1].equalsIgnoreCase(playerName)) {
 				return UUID.fromString(curEntry[0]);

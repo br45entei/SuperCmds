@@ -1,5 +1,5 @@
 #Fat Jar Configuration File
-#Mon Dec 22 01:15:28 CST 2014
+#Sat Dec 27 02:11:32 CST 2014
 onejar.license.required=true
 manifest.classpath=
 manifest.removesigners=false
@@ -10,5 +10,5 @@ manifest.mainclass=
 manifest.file=<createnew>
 jarname.isextern=true
 onejar.expand=
-excludes=<jar|bukkit-1.7.10-R0.1-20140817.175650-8.jar>;<jar|spigot-1.8.jar>;<jar|Vault-1.5.0.jar>
+excludes=<jar|Spigot_1.8_Custom_Build.jar>;<jar|Vault-1.5.0.jar>
 includes=

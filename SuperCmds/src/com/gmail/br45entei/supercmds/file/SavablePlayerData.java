@@ -181,6 +181,25 @@ public abstract class SavablePlayerData extends AbstractPlayerJoinQuitClass {
 		return this.getPlayer() != null;
 	}
 	
+	public final boolean saveAndDisposeIfPlayerNotOnline() {
+		if(this.isDisposed()) {
+			return false;
+		}
+		boolean saved = this.saveToFile();
+		if(!this.isPlayerOnline()) {
+			this.dispose();
+		}
+		return saved;
+	}
+	
+	public final boolean disposeIfPlayerNotOnline() {
+		if(this.isDisposed() || this.isPlayerOnline()) {
+			return false;
+		}
+		this.dispose();
+		return true;
+	}
+	
 	public final String getPlayerDisplayName() {
 		return(this.isPlayerOnline() ? this.getPlayer().getDisplayName() : this.name);
 	}

@@ -118,6 +118,10 @@ commands:
     description: "Change your display name."
     usage: "'/nick {args...}'. Note that there is a 16 character cut-off limit."
     aliases: [nickname]
+  realname:
+    description: "View a player's real name."
+    usage: "/realname {targetName}"
+    aliases: [ign]
   chat:
     description: "Manage custom player prefixes, nicknames, and suffixes."
     usage: "/chat {targetName} {prefix|nickname|suffix} {args...|clear}"
@@ -125,3 +129,12 @@ commands:
     description: "Edit and/or take a look at a player's inventory."
     usage: "/invsee {targetName} {inv|ender/enderchest|armor/armour}"
     aliases: [peek]
+  setwarp:
+    description: "Set up a public or private warp."
+    usage: "/setwarp {warpname} [requireperm|requiregroup] [perm|groupname]"
+  warp:
+    description: "Teleport to a public or private warp."
+    usage: "/warp {warpname}"
+  warps:
+    description: "Shows you a list of all available warps."
+    usage: "/warps list"

@@ -41,6 +41,8 @@ import com.gmail.br45entei.supercmds.cmds.MainCmdListener;
 import com.gmail.br45entei.supercmds.file.PlayerPermissions;
 import com.gmail.br45entei.supercmds.file.PlayerPermissions.Group;
 import com.gmail.br45entei.supercmds.file.SavablePlayerData;
+import com.gmail.br45entei.supercmds.file.SavablePluginData;
+import com.gmail.br45entei.supercmds.file.Warps;
 import com.gmail.br45entei.supercmds.util.CodeUtils;
 import com.gmail.br45entei.supercmds.yml.YamlMgmtClass;
 
@@ -56,6 +58,8 @@ public class Main extends JavaPlugin implements Listener {
 		Main.server.getPluginManager().registerEvents(new Economy(), Main.instance);
 		Main.server.getPluginManager().registerEvents(new Chat(), Main.instance);
 		Main.server.getPluginManager().registerEvents(new Permissions(), Main.instance);
+		Main.server.getPluginManager().registerEvents(Main.uuidMasterList, Main.getInstance());
+		Warps.getInstance();//registers events for Warps.java in the SavablePluginData class' constructor.
 	}
 	
 	public static final Main getInstance() {
@@ -165,6 +169,10 @@ public class Main extends JavaPlugin implements Listener {
 	public static File					dataFolder		= null;
 	public static String				dataFolderName	= "";
 	public static boolean				YamlsAreLoaded	= false;
+	/** Yes, I set a FileConfiguration object as a static member. Problem?
+	 * 
+	 * @see <a
+	 *      href="http://wiki.bukkit.org/Configuration_API_Reference#The_Configuration_Object">http://wiki.bukkit.org/Configuration_API_Reference#The_Configuration_Object</a> */
 	public static FileConfiguration		config;
 	public static File					configFile		= null;
 	public static String				configFileName	= "config.yml";
@@ -243,8 +251,11 @@ public class Main extends JavaPlugin implements Listener {
 	public static String				noPerm					= "";
 	
 	public static boolean				handleEconomy			= false;
+	public static String				moneyTerm				= "money";
 	public static boolean				handleChat				= false;
 	public static boolean				handlePermissions		= false;
+	
+	public static String				playerPromotedMessage	= "&aPlayer &f\"%s\"&r&a was just promoted to the &3%s&r&a rank!";
 	
 	public static Location				spawnLocation			= null;
 	
@@ -300,6 +311,7 @@ public class Main extends JavaPlugin implements Listener {
 				Main.sendConsoleMessage(Main.pluginName + "&cVault Permissions API was not successful.");
 			}
 			Main.registerEvents();
+			Warps.getInstance().loadFromFile();
 			Main.sendConsoleMessage(Main.pluginName + "&aVersion " + Main.pdffile.getVersion() + " is now enabled!");
 			//Back up the config files:
 			if(Main.backupOnStartup) {
@@ -308,16 +320,24 @@ public class Main extends JavaPlugin implements Listener {
 					public void run() {
 						File[] playerFolders = SavablePlayerData.getStaticSaveFolders();
 						try {
-							String date = CodeUtils.getSystemTime(false, true, true);//Date only, file system safe
+							final String date = CodeUtils.getSystemTime(false, true, true);//Date only, file system safe
+							File backupsFolder = new File(Main.dataFolder, "Config_Backups");
+							backupsFolder.mkdirs();
 							for(File playerFolder : playerFolders) {
-								File backupsFolder = new File(Main.dataFolder, "Config_Backups");
-								backupsFolder.mkdirs();
 								File playerZip = new File(backupsFolder, FilenameUtils.getName(playerFolder.getAbsolutePath()) + "_" + date + ".zip");
 								try {
 									playerZip.delete();
 								} catch(Throwable ignored) {
 								}
 								FileMgmt.zipDir(playerFolder, playerZip);
+							}
+							for(SavablePluginData data : SavablePluginData.getAllInstances()) {
+								File zipFile = new File(backupsFolder, FilenameUtils.getName(data.getSaveFile().getAbsolutePath()) + "_" + date + ".zip");
+								try {
+									zipFile.delete();
+								} catch(Throwable ignored) {
+								}
+								FileMgmt.zipFile(data.getSaveFile(), zipFile);
 							}
 						} catch(Throwable e) {
 							final String throwable = Main.throwableToStr(e);
@@ -777,6 +797,13 @@ public class Main extends JavaPlugin implements Listener {
 		Random r = new Random();
 		int R = r.nextInt(High - Low) + Low;
 		return R;
+	}
+	
+	public static boolean LocationPreciseEquals(Location loc1, Location loc2) {
+		boolean x = (loc1.getX() == loc2.getX());
+		boolean y = (loc1.getY() == loc2.getY());
+		boolean z = (loc1.getZ() == loc2.getZ());
+		return x && y && z;
 	}
 	
 	public static boolean LocationEquals(Location loc1, Location loc2) {

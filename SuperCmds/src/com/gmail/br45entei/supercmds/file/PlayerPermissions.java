@@ -15,6 +15,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.permissions.PermissionAttachment;
+import org.bukkit.plugin.IllegalPluginAccessException;
 
 import com.gmail.br45entei.supercmds.Main;
 import com.gmail.br45entei.supercmds.yml.YamlMgmtClass;
@@ -33,7 +34,7 @@ public class PlayerPermissions extends SavablePlayerData {
 	
 	PermissionAttachment			attachment	= null;
 	
-	public final PermissionAttachment getAttachment() {
+	public final PermissionAttachment getAttachment() throws IllegalArgumentException {
 		if(this.attachment == null && this.isPlayerOnline()) {
 			this.attachment = this.getPlayer().addAttachment(Main.getInstance());
 		}
@@ -120,8 +121,13 @@ public class PlayerPermissions extends SavablePlayerData {
 	}
 	
 	public static final void refreshPlayerPermissions() {
-		for(PlayerPermissions perm : PlayerPermissions.permInstances) {
-			perm.reloadFromConfigAndSaveToFile();
+		try {
+			for(PlayerPermissions perm : PlayerPermissions.permInstances) {
+				perm.reloadFromConfigAndSaveToFile();
+			}
+		} catch(IllegalArgumentException ignored) {
+		} catch(Throwable e) {
+			Main.sendConsoleMessage(Main.pluginName + "&eAn error occurred while refreshing player permissions:&z&c" + Main.throwableToStr(e));
 		}
 	}
 	
@@ -131,7 +137,7 @@ public class PlayerPermissions extends SavablePlayerData {
 		}
 		final Group oldGroup = this.group;
 		if(oldGroup != null) {
-			
+			this.group = newGroup;
 		}
 		return this.reloadFromConfigAndSaveToFile();
 	}
@@ -167,8 +173,11 @@ public class PlayerPermissions extends SavablePlayerData {
 		if(!this.isPlayerOnline()) {
 			return false;
 		}
-		this.getAttachment().remove();
-		this.attachment = null;
+		try {
+			this.getAttachment().remove();
+			this.attachment = null;
+		} catch(IllegalArgumentException ignored) {
+		}
 		if(this.getAttachment() != null) {//XXX This is not dead code. Read it again.
 			this.loadPermissionsFromGroup(this.group);
 			this.reloadPlayerPermissions();
@@ -213,6 +222,19 @@ public class PlayerPermissions extends SavablePlayerData {
 		if(SavablePlayerData.playerEquals(this.getPlayer(), event.getPlayer())) {
 			this.getAttachment();
 			this.loadFromFile();
+			if(this.group == null) {
+				this.group = Group.getDefaultGroup();
+				if(this.group != null) {
+					String msg = Main.pluginName + String.format(Main.playerPromotedMessage, this.getPlayer().getDisplayName(), this.group.displayName);
+					for(Player player : new ArrayList<>(Main.server.getOnlinePlayers())) {
+						if(!player.getUniqueId().toString().equals(this.getPlayer().getUniqueId().toString())) {
+							Main.sendMessage(player, msg);
+						}
+					}
+					Main.sendConsoleMessage(msg);
+					Main.sendMessage(this.getPlayer(), Main.pluginName + "&aYou have been promoted to the \"&f" + this.group.displayName + "&r&a\" rank!");
+				}
+			}
 		}
 	}
 	
@@ -243,6 +265,26 @@ public class PlayerPermissions extends SavablePlayerData {
 	}
 	
 	//============================================================================================
+	
+	public final boolean isAMemberOfGroup(final Group group) {
+		if(this.group == null || group == null) {
+			return false;
+		}
+		if(this.group.name.equals(group.name)) {
+			return true;
+		}
+		Group inheritance = this.group.inheritance;
+		while(inheritance != null) {
+			if(this.group.name.equals(inheritance.name)) {
+				return true;
+			}
+			inheritance = inheritance.inheritance;//XD
+			if(inheritance == null) {
+				break;
+			}
+		}
+		return false;
+	}
 	
 	public static final boolean hasPermission(Player player, String permission) {
 		if(player == null || permission == null) {
@@ -319,13 +361,28 @@ public class PlayerPermissions extends SavablePlayerData {
 	}
 	
 	public static final class Group extends SavablePlayerData {
-		public static final ArrayList<Group>	groups		= new ArrayList<>();
+		public static final ArrayList<Group>	groups	= new ArrayList<>();
 		public static YamlConfiguration			config;
 		
-		public boolean							isDefault;
-		public String							displayName;
-		public Group							inheritance;
-		public final ArrayList<String>			permissions	= new ArrayList<>();
+		public static final ArrayList<Group> getInstances() {
+			return new ArrayList<>(Group.groups);
+		}
+		
+		public boolean					isDefault;
+		public String					displayName;
+		public Group					inheritance;
+		public Group					nextGroup;
+		public double					costToRankup;
+		public final ArrayList<String>	permissions	= new ArrayList<>();
+		
+		public static final Group getDefaultGroup() {
+			for(Group group : new ArrayList<>(Group.groups)) {
+				if(group.isDefault) {
+					return group;
+				}
+			}
+			return null;
+		}
 		
 		@Override
 		public final String toString() {
@@ -333,17 +390,14 @@ public class PlayerPermissions extends SavablePlayerData {
 			"Default Group: &e" + this.isDefault + "&3\n" + //
 			"Display Name: \"&f" + this.displayName + "&r&3\"\n" + //
 			"Inherited Group: &e" + (this.inheritance != null ? this.inheritance.name : "null") + "&3\n" + //
+			"Next Group(Rankup): &e" + (this.nextGroup != null ? this.nextGroup.name : "null") + "&3\n" + //
 			"Total number of permissions: &e" + this.getAllPermissions().size();
 			return Main.formatColorCodes(rtrn);
 		}
 		
 		public final boolean setDefault(boolean isDefault) {
-			for(Group group : new ArrayList<>(Group.groups)) {
-				if(group != this) {
-					if(group.isDefault) {
-						return false;
-					}
-				}
+			if(Group.getDefaultGroup() != null && Group.getDefaultGroup() != this) {
+				return false;
 			}
 			boolean wasDefault = this.isDefault;
 			this.isDefault = isDefault;
@@ -362,6 +416,10 @@ public class PlayerPermissions extends SavablePlayerData {
 				}
 			}
 			return rtrn;
+		}
+		
+		public final boolean canRankup() {
+			return this.nextGroup != null;
 		}
 		
 		public static final void reloadFromFile() {
@@ -515,6 +573,8 @@ public class PlayerPermissions extends SavablePlayerData {
 					this.displayName = "&f" + Main.capitalizeFirstLetter(this.name);
 				}
 				this.inheritance = Group.getGroupByName(group.getString("inheritance"));
+				this.nextGroup = Group.getGroupByName(group.getString("nextGroup"));
+				this.costToRankup = group.getDouble("costToRankup");
 				if(group.getStringList("permissions") == null) {
 					group.set("permissions", this.permissions);
 					Main.sendConsoleMessage(Main.pluginName + "&5Created group.yml: groups." + this.name + ".permissions entry!");
@@ -540,6 +600,8 @@ public class PlayerPermissions extends SavablePlayerData {
 			group.set("isDefault", new Boolean(this.isDefault));
 			group.set("displayName", this.displayName);
 			group.set("inheritance", (this.inheritance != null ? this.inheritance.name : ""));
+			group.set("nextGroup", (this.nextGroup != null ? this.nextGroup.name : ""));
+			group.set("costToRankup", new Double(this.costToRankup));
 			group.set("permissions", this.permissions);
 		}
 		
@@ -592,6 +654,16 @@ public class PlayerPermissions extends SavablePlayerData {
 			return this.inheritance != oldInheritance;
 		}
 		
+		public final boolean setNextGroup(Group group) {
+			Group oldNextGroup = this.nextGroup;
+			if(group == this) {
+				group = oldNextGroup;
+			}
+			this.nextGroup = group;
+			PlayerPermissions.refreshPlayerPermissions();
+			return this.nextGroup != oldNextGroup;
+		}
+		
 		public static final void disposeAll() {
 			for(Group group : new ArrayList<>(Group.groups)) {
 				group.dispose();
@@ -609,6 +681,9 @@ public class PlayerPermissions extends SavablePlayerData {
 			}
 			for(Group group : new ArrayList<>(Group.groups)) {
 				if(group != this && group != null) {
+					if(group.nextGroup == this) {
+						group.setNextGroup(null);
+					}
 					if(group.inheritance == this) {
 						group.setInheritance(null);
 					}
@@ -616,12 +691,15 @@ public class PlayerPermissions extends SavablePlayerData {
 			}
 			super.dispose();
 			Group.groups.remove(this);
-			Main.scheduler.scheduleSyncDelayedTask(Main.getInstance(), new Runnable() {
-				@Override
-				public void run() {
-					PlayerPermissions.refreshPlayerPermissions();
-				}
-			});
+			try {
+				Main.scheduler.scheduleSyncDelayedTask(Main.getInstance(), new Runnable() {
+					@Override
+					public void run() {
+						PlayerPermissions.refreshPlayerPermissions();
+					}
+				});
+			} catch(IllegalPluginAccessException ignored) {
+			}
 		}
 		
 	}

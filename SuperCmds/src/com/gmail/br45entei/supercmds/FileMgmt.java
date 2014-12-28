@@ -438,6 +438,32 @@ public class FileMgmt {
 		}
 	}
 	
+	public static final void zipFile(final File from, File zipFile) throws IOException {
+		if(from == null || !from.exists()) {
+			return;
+		}
+		@SuppressWarnings("resource")
+		ZipOutputStream out = new ZipOutputStream(new FileOutputStream(zipFile));
+		String zipEntryPath = FilenameUtils.getPath(from.getAbsolutePath().replace(from.getParentFile().getAbsolutePath(), "")) + FilenameUtils.getName(from.getAbsolutePath());
+		byte[] tmpBuf = new byte[1024];
+		@SuppressWarnings("resource")
+		FileInputStream in = new FileInputStream(from);
+		out.putNextEntry(new ZipEntry(zipEntryPath));
+		int len;
+		while((len = in.read(tmpBuf)) > 0) {
+			out.write(tmpBuf, 0, len);
+		}
+		out.closeEntry();
+		try {
+			in.close();
+		} catch(Throwable ignored) {
+		}
+		try {
+			out.close();
+		} catch(Throwable ignored) {
+		}
+	}
+	
 	public static final void zipDir(final File from, File to) throws IOException {
 		@SuppressWarnings("resource")
 		ZipOutputStream out = new ZipOutputStream(new FileOutputStream(to));

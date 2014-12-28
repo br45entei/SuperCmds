@@ -29,15 +29,20 @@ import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.server.ServerCommandEvent;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scoreboard.Team;
 
 import com.gmail.br45entei.supercmds.Main;
 import com.gmail.br45entei.supercmds.api.Permissions;
+import com.gmail.br45entei.supercmds.file.PlayerChat;
+import com.gmail.br45entei.supercmds.file.PlayerEcoData;
 import com.gmail.br45entei.supercmds.file.PlayerPermissions;
 import com.gmail.br45entei.supercmds.file.PlayerPermissions.Group;
 import com.gmail.br45entei.supercmds.file.SavablePlayerData;
+import com.gmail.br45entei.supercmds.file.Warps;
+import com.gmail.br45entei.supercmds.file.Warps.Warp;
 import com.gmail.br45entei.supercmds.util.CodeUtils;
 
 /** @author Brian_Entei */
@@ -102,6 +107,10 @@ public final strictfp class MainCmdListener implements Listener {
 		if(event.getEntity() instanceof Player) {
 			Player player = (Player) event.getEntity();
 			PlayerStatus status = PlayerStatus.getPlayerStatus(player);
+			if(!Permissions.hasPerm(player, "supercmds.use.god") && status.isGodModeOn) {
+				status.isGodModeOn = false;
+				Main.sendMessage(status.getPlayer(), Main.pluginName + "&aSet god mode to " + (status.isGodModeOn ? "&2true" : "&cfalse") + "&f.");
+			}
 			event.setCancelled(status.isGodModeOn);
 		}
 	}
@@ -807,7 +816,7 @@ public final strictfp class MainCmdListener implements Listener {
 			Main.sendMessage(user, Main.pluginName + "&eUsage: \"&f/" + command + "&e\"");
 			return true;
 		} else if(command.equalsIgnoreCase("gamemode") || command.equalsIgnoreCase("gm") || command.equalsIgnoreCase("gammedoe") || command.equalsIgnoreCase("gammeode")) {
-			if(args.length == 1) {
+			if(args.length == 1) {// Don't worry, the setGameModeForPlayer method checks for permissions etc.
 				if(user != null) {
 					MainCmdListener.setGameModeForPlayer(sender, user, userName, args[0]);
 				} else {
@@ -967,13 +976,16 @@ public final strictfp class MainCmdListener implements Listener {
 				Main.sendMessage(sender, Main.pluginName + Main.noPerm);
 				return true;
 			}
-			if(args.length == 1) {//XXX /group list
+			if(args.length == 1) {// /group list
 				if(args[0].equalsIgnoreCase("list")) {
-					//TODO list all group.displayName names then their group.name name in parenthesis.
+					Main.sendMessage(sender, Main.pluginName + "&aListing all groups:");
+					for(Group group : Group.getInstances()) {
+						Main.sendMessage(sender, "&3\"&f" + group.displayName + "&r&3\"(config name: &f" + group.name + "&r&3);");
+					}
 					return true;
 				}
 				Main.sendMessage(sender, Main.pluginName + "&eInvalid flag \"&f" + args[0] + "&r&e\".");
-			} else if(args.length == 2) {//XXX /group {groupName} {create|delete|info}
+			} else if(args.length == 2) {// /group {groupName} {create|delete|info}
 				String groupName = args[0];
 				String createDeleteInfo = args[1];
 				Group check = Group.getGroupByName(groupName);
@@ -1007,7 +1019,7 @@ public final strictfp class MainCmdListener implements Listener {
 				} else {
 					Main.sendMessage(sender, Main.pluginName + "&eInvalid flag \"&f" + createDeleteInfo + "&r&e\".");
 				}
-			} else if(args.length == 3) {//XXX /group {groupName} {add|remove} {permission.node}
+			} else if(args.length == 3) {// /group {groupName} {add|remove} {permission.node}
 				String groupName = args[0];
 				String addRemove = args[1];
 				String permNode = args[2];
@@ -1031,15 +1043,15 @@ public final strictfp class MainCmdListener implements Listener {
 				} else {
 					Main.sendMessage(sender, Main.pluginName + "&eThe group \"&f" + groupName + "&r&e\" does not exist.");
 				}
-			} else if(args.length == 4) {//XXX /group {groupName} {set} {default|displayName|inheritance} {value}
+			} else if(args.length == 4) {// /group {groupName} {set} {default|displayName|inheritance|nextgroup} {value}
 				String groupName = args[0];
 				String flag = args[1];//this might be unnecessary, but meh.
-				String defaultDispInher = args[2];
+				String defaultDispInherNexGr = args[2];
 				String value = args[3];
 				Group group = Group.getGroupByName(groupName);
 				if(group != null) {
 					if(flag.equalsIgnoreCase("set")) {
-						if(defaultDispInher.equalsIgnoreCase("default")) {
+						if(defaultDispInherNexGr.equalsIgnoreCase("default")) {
 							Boolean val = value.equalsIgnoreCase("true") ? Boolean.TRUE : (value.equalsIgnoreCase("false") ? Boolean.FALSE : null);
 							if(val != null) {
 								boolean isDefault = val.booleanValue();
@@ -1051,14 +1063,14 @@ public final strictfp class MainCmdListener implements Listener {
 								return true;
 							}
 							Main.sendMessage(sender, Main.pluginName + "&eInvalid value \"&f" + value + "&r&e\".");
-						} else if(defaultDispInher.equalsIgnoreCase("displayname")) {
+						} else if(defaultDispInherNexGr.equalsIgnoreCase("displayname")) {
 							if(group.setDisplayName(value)) {
 								Main.sendMessage(sender, Main.pluginName + "&aThe command completed successfully.");
 							} else {
 								Main.sendMessage(sender, Main.pluginName + "&eSomething went wrong when changing the display name of the group \"&f" + group.name + "&r&e\" to \"&f" + value + "&r&e\"!&z&aPerhaps the old display name is the same as the new one?");
 							}
 							return true;
-						} else if(defaultDispInher.equalsIgnoreCase("inheritance")) {
+						} else if(defaultDispInherNexGr.equalsIgnoreCase("inheritance")) {
 							Group newInheritance = Group.getGroupByName(value);
 							if(newInheritance != null) {
 								if(group.setInheritance(newInheritance)) {
@@ -1069,8 +1081,19 @@ public final strictfp class MainCmdListener implements Listener {
 								return true;
 							}
 							Main.sendMessage(sender, Main.pluginName + "&eThe group \"&f" + value + "&r&e\" does not exist.");
+						} else if(defaultDispInherNexGr.equalsIgnoreCase("nextgroup")) {
+							Group nextGroup = Group.getGroupByName(value);
+							if(nextGroup != null) {
+								if(group.setNextGroup(nextGroup)) {
+									Main.sendMessage(sender, Main.pluginName + "&aThe command completed successfully.");
+									return true;
+								}
+								Main.sendMessage(sender, Main.pluginName + "&eSomething went wrong when setting the group \"&f" + group.name + "&r&e\"'s next group(rankup) to \"&f&r&e\"!&z&aPerhaps it was already set to that group?&z&a(Note: you can't set a group as it's own next group.)");
+								return true;
+							}
+							Main.sendMessage(sender, Main.pluginName + "&eThe group \"&f" + value + "&r&e\" does not exist.");
 						} else {
-							Main.sendMessage(sender, Main.pluginName + "&eInvalid flag \"&f" + defaultDispInher + "&r&e\".");
+							Main.sendMessage(sender, Main.pluginName + "&eInvalid flag \"&f" + defaultDispInherNexGr + "&r&e\".");
 						}
 					} else {
 						Main.sendMessage(sender, Main.pluginName + "&eInvalid flag \"&f" + flag + "&r&e\".");
@@ -1082,11 +1105,107 @@ public final strictfp class MainCmdListener implements Listener {
 			Main.sendMessage(sender, Main.pluginName + "&eUsage: \"&f/" + command + " {groupName} {add|remove} {permission.node}&e\" or&z&e\"&f/" + command + " {groupName} {create|delete|info}&e\" or&z&e\"&f/" + command + " {groupName} {set} {default|displayName|inheritance} {value}&e\"");
 			return true;
 		} else if(command.equalsIgnoreCase("bal") || command.equalsIgnoreCase("balance") || command.equalsIgnoreCase("money") || command.equalsIgnoreCase("fe")) {
-			//TODO Economy cmds; requires permission
-			return false;
+			if(!Permissions.hasPerm(sender, "supercmds.use.money") && !Permissions.hasPerm(sender, "supercmds.use.bal") && !Permissions.hasPerm(sender, "supercmds.use.balance") && !Permissions.hasPerm(sender, "supercmds.use.fe")) {
+				Main.sendMessage(sender, Main.pluginName + Main.noPerm);
+				return true;
+			}
+			if(args.length == 0) {
+				if(user == null) {
+					Main.sendMessage(sender, Main.getPlayerOnlyMsg());
+				} else {
+					PlayerEcoData eco = PlayerEcoData.getPlayerEcoData(user);
+					Main.sendMessage(user, Main.pluginName + "&aYou have \"&f" + eco.balance + "&r&a\" &f" + Main.moneyTerm + "&r&a in your pocket and \"&f" + eco.credits + "&r&a\" credits to your name.");
+					eco.saveToFile();//Ah, to remove or not to remove, that is the question...
+					return true;
+				}
+			} else if(args.length == 1) {
+				UUID target = Main.uuidMasterList.getUUIDFromPlayerName(args[0]);
+				String targetName = Main.uuidMasterList.getPlayerNameFromUUID(target);
+				if(target != null) {
+					PlayerEcoData eco = PlayerEcoData.getPlayerEcoData(target);
+					Main.sendMessage(sender, Main.pluginName + "&aPlayer \"&f" + targetName + "&r&a\" has \"&f" + eco.balance + "&r&a\" &f" + Main.moneyTerm + "&r&a in their pocket and has \"&f" + eco.credits + "&r&a\" credits to their name.");
+					eco.disposeIfPlayerNotOnline();
+					return true;
+				}
+				Main.sendMessage(sender, MainCmdListener.getNoPlayerMsg(args[0]));
+			}
+			if(user == null) {
+				Main.sendMessage(sender, Main.pluginName + "&eNon-player usage: \"&f/" + command + " {targetName}&e\"");
+			} else {
+				Main.sendMessage(sender, Main.pluginName + "&eUsage: \"&f/" + command + "&e\" or \"&f/" + command + " [targetName]&e\"");
+			}
+			return true;
 		} else if(command.equalsIgnoreCase("eco") || command.equalsIgnoreCase("econ") || command.equalsIgnoreCase("economy")) {
-			//TODO Economy cmds; requires permission
-			return false;
+			if(!Permissions.hasPerm(sender, "supercmds.use.eco") && !Permissions.hasPerm(sender, "supercmds.use.econ") && !Permissions.hasPerm(sender, "supercmds.use.economy")) {
+				Main.sendMessage(sender, Main.pluginName + Main.noPerm);
+				return true;
+			}
+			if(args.length == 4) {
+				String flag = args[0];
+				UUID target = Main.uuidMasterList.getUUIDFromPlayerName(args[1]);
+				String targetName = Main.uuidMasterList.getPlayerNameFromUUID(target);
+				String moneyCredit = args[2];
+				String value = args[3];
+				if(target != null) {
+					if(!CodeUtils.isStrAValidDouble(value)) {
+						Main.sendMessage(sender, Main.pluginName + "&eInvalid amount given: \"&f" + value + "&r&e\".");
+					} else {
+						double amount = CodeUtils.getDoubleFromStr(value, 0);
+						int intAmount = Double.valueOf(Math.round(amount)).intValue();
+						PlayerEcoData eco = PlayerEcoData.getPlayerEcoData(target);
+						if(flag.equalsIgnoreCase("give")) {
+							if(moneyCredit.equalsIgnoreCase("money")) {
+								eco.balance += amount;
+								Main.sendMessage(sender, Main.pluginName + "&aYou gave &f" + String.format("%.2g%n", new Double(amount)) + " " + Main.moneyTerm + "&r&a to player \"&f" + targetName + "&r&a\". They now have &f" + String.format("%.2g%n", new Double(eco.balance)) + " " + Main.moneyTerm + "&r&a.");
+								eco.saveAndDisposeIfPlayerNotOnline();
+								return true;
+							} else if(moneyCredit.equalsIgnoreCase("credit")) {
+								eco.credits += intAmount;
+								Main.sendMessage(sender, Main.pluginName + "&aYou gave &f" + intAmount + "&r&a credits to player \"&f" + targetName + "&r&a\". They now have &f" + eco.credits + "&r&a.");
+								eco.saveAndDisposeIfPlayerNotOnline();
+								return true;
+							} else {
+								Main.sendMessage(sender, Main.pluginName + "&eInvalid flag \"&f" + moneyCredit + "&r&e\".");
+							}
+						} else if(flag.equalsIgnoreCase("take")) {
+							if(moneyCredit.equalsIgnoreCase("money")) {
+								eco.balance -= amount;
+								Main.sendMessage(sender, Main.pluginName + "&aYou took &f" + String.format("%.2g%n", new Double(amount)) + " " + Main.moneyTerm + "&r&a from player \"&f" + targetName + "&r&a\". They now have &f" + String.format("%.2g%n", new Double(eco.balance)) + " " + Main.moneyTerm + "&r&a.");
+								eco.saveAndDisposeIfPlayerNotOnline();
+								return true;
+							} else if(moneyCredit.equalsIgnoreCase("credit")) {
+								eco.credits -= intAmount;
+								Main.sendMessage(sender, Main.pluginName + "&aYou took &f" + intAmount + "&r&a credits from player \"&f" + targetName + "&r&a\". They now have &f" + eco.credits + "&r&a.");
+								eco.saveAndDisposeIfPlayerNotOnline();
+								return true;
+							} else {
+								Main.sendMessage(sender, Main.pluginName + "&eInvalid flag \"&f" + moneyCredit + "&r&e\".");
+							}
+						} else if(flag.equalsIgnoreCase("set")) {
+							if(moneyCredit.equalsIgnoreCase("money")) {
+								eco.balance = amount;
+								Main.sendMessage(sender, Main.pluginName + "&aYou set \"&f" + targetName + "&r&a\"'s  &f" + Main.moneyTerm + "&r&a to &f" + String.format("%.2g%n", new Double(eco.balance)) + " " + Main.moneyTerm + "&r&a.");
+								eco.saveAndDisposeIfPlayerNotOnline();
+								return true;
+							} else if(moneyCredit.equalsIgnoreCase("credit")) {
+								eco.credits = intAmount;
+								Main.sendMessage(sender, Main.pluginName + "&aYou set player \"&f" + targetName + "&r&a\"'s credit to &f" + eco.credits + "&r&a.");
+								eco.saveAndDisposeIfPlayerNotOnline();
+								return true;
+							} else {
+								Main.sendMessage(sender, Main.pluginName + "&eInvalid flag \"&f" + moneyCredit + "&r&e\".");
+							}
+						} else {
+							Main.sendMessage(sender, Main.pluginName + "&eInvalid flag \"&f" + flag + "&r&e\".");
+						}
+						eco.disposeIfPlayerNotOnline();
+					}
+				} else {
+					Main.sendMessage(sender, MainCmdListener.getNoPlayerMsg(args[1]));
+				}
+			}
+			Main.sendMessage(sender, Main.pluginName + "&eUsage: \"&f/" + command + " {give|take|set} {targetName} {money|credit} {amount} &e\"");
+			return true;
 		} else if(command.equalsIgnoreCase("speed")) {
 			//TODO Player fly/walk speed; requires permission
 			return false;
@@ -1094,17 +1213,331 @@ public final strictfp class MainCmdListener implements Listener {
 			//TODO bukkit /give command; requires permission
 			return false;
 		} else if(command.equalsIgnoreCase("hat")) {
-			//TODO Player command for putting held item on head armour slot; requires permission
-			return false;
-		} else if(command.equalsIgnoreCase("nick")) {
-			//TODO Player command for changing their nicknames; requires permission
-			return false;
-		} else if(command.equalsIgnoreCase("chat")) {
-			//TODO Admin command for managing player prefixes, nicknames, and suffixes; requires permission
-			return false;
+			if(!Permissions.hasPerm(sender, "supercmds.use.hat")) {
+				Main.sendMessage(sender, Main.pluginName + Main.noPerm);
+				return true;
+			}
+			if(args.length == 0) {
+				if(user != null) {
+					ItemStack itemInHand = user.getInventory().getItemInHand();
+					if(itemInHand == null || itemInHand.getType() == Material.AIR) {
+						ItemStack itemOnHead = user.getInventory().getHelmet();
+						if(itemInHand != null && itemInHand.getType() != Material.AIR) {
+							user.getInventory().setItemInHand(itemOnHead);
+						}
+						user.getInventory().setHelmet(itemInHand);
+						Main.sendMessage(sender, Main.pluginName + "&aEnjoy your new hat!");
+						return true;
+					}
+				} else {
+					Main.sendMessage(sender, Main.getPlayerOnlyMsg());
+				}
+				return true;
+			}
+			Main.sendMessage(sender, Main.pluginName + "&eUsage: \"&f/" + command + "&e\"");
+			return true;
+		} else if(command.equalsIgnoreCase("nick") || command.equalsIgnoreCase("nickname")) {
+			if(!Permissions.hasPerm(sender, "supercmds.use.nick") && !Permissions.hasPerm(sender, "supercmds.use.nickname")) {
+				Main.sendMessage(sender, Main.pluginName + Main.noPerm);
+				return true;
+			}
+			if(Main.handleChat) {
+				if(user != null) {
+					if(args.length >= 1) {
+						String nickName = strArgs.trim();
+						int nickLength = Main.stripColorCodes(Main.formatColorCodes(nickName)).length();
+						if(nickLength <= 16) {
+							PlayerChat chat = PlayerChat.getPlayerChat(user);
+							chat.setNickname(nickName);
+							Main.sendMessage(user, Main.pluginName + "&aYour new nickname is: \"&f" + chat.getNickName() + "&r&a\"!");
+							chat = null;
+							return true;
+						}
+						Main.sendMessage(user, Main.pluginName + "&eSorry, but nicknames must be up to 16 characters in length.&z&aNote: Color codes do not count towards this limit.");
+						return true;
+					}
+					Main.sendMessage(user, Main.pluginName + "&eUsage: \"&f/" + command + " {args...}&e\"");
+				} else {
+					Main.sendMessage(sender, Main.getPlayerOnlyMsg());
+				}
+				return true;
+			}
+			Main.sendMessage(sender, Main.pluginName + "&eThis plugin's '&fhandleChat&e' option was set to &cfalse&e in the config.yml;&z&eTherefore this command has been disabled.");
+			return true;
+		} else if(command.equalsIgnoreCase("realname") || command.equalsIgnoreCase("ign")) {
+			if(Main.handleChat) {
+				if(args.length == 1) {
+					String nickName = args[0];
+					String realName = null;
+					for(PlayerChat chat : PlayerChat.getInstances()) {
+						if(Main.stripColorCodes(Main.formatColorCodes(chat.nickname)).equalsIgnoreCase(nickName)) {
+							nickName = chat.getNickName();
+							realName = Main.uuidMasterList.getPlayerNameFromUUID(chat.uuid);
+							break;
+						}
+					}
+					if(realName != null) {
+						Main.sendMessage(sender, Main.pluginName + "&f\"" + nickName + "&r&a\"'s real name is: &f" + realName);
+						return true;
+					}
+					Main.sendMessage(sender, Main.pluginName + "&eThere is no one online with the nick name&z&e\"&f" + nickName + "&r&e\".");
+					return true;
+				}
+				Main.sendMessage(sender, Main.pluginName + "&eUsage: \"&f/" + command + " {targetNickName}&e\"");
+				return true;
+			}
+			Main.sendMessage(sender, Main.pluginName + "&eThis plugin's '&fhandleChat&e' option was set to &cfalse&e in the config.yml;&z&eTherefore this command has been disabled.");
+			return true;
+		} else if(command.equalsIgnoreCase("chat")) {// Admin command for managing player prefixes, nicknames, and suffixes; requires permission
+			if(!Permissions.hasPerm(sender, "supercmds.use.chat")) {
+				Main.sendMessage(sender, Main.pluginName + Main.noPerm);
+				return true;
+			}
+			if(Main.handleChat) {
+				if(args.length >= 2) {
+					UUID target = Main.uuidMasterList.getUUIDFromPlayerName(args[0]);
+					String targetName = Main.uuidMasterList.getPlayerNameFromUUID(target);
+					if(target == null) {
+						Main.sendMessage(sender, MainCmdListener.getNoPlayerMsg(args[0]));
+					} else {
+						PlayerChat chat = PlayerChat.getPlayerChat(target);
+						String flag = args[1];
+						if(args.length == 2) {// /chat {targetName} {info}
+							if(flag.equalsIgnoreCase("info")) {
+								Main.sendMessage(sender, Main.pluginName + "&3Displaying player \"&f" + targetName + "&r&3\"'s chat information:&z&f" + chat.toString());
+								chat.disposeIfPlayerNotOnline();
+								return true;
+							}
+							Main.sendMessage(sender, Main.pluginName + "&eInvalid flag \"&f" + flag + "&r&e\".");
+						} else if(args.length == 3) {// /chat {targetName} {prefix|nickname|suffix} {args...|clear}
+							String mkArgs = "";
+							for(int i = 2; i < args.length; i++) {
+								mkArgs += args[i] + " ";
+							}
+							mkArgs = mkArgs.trim();
+							if(flag.equalsIgnoreCase("prefix")) {
+								if(mkArgs.equalsIgnoreCase("clear")) {
+									chat.setPrefix(null);
+								} else {
+									chat.setPrefix(mkArgs);
+								}
+								Main.sendMessage(sender, Main.pluginName + "&aSuccessfully set \"&f" + targetName + "&r&a\"'s prefix to: \"&f" + chat.prefix + "&r&a\"!&z&aTheir resulting display name is: \"&f" + chat.getDisplayName() + "&r&a\".");
+								chat.saveAndDisposeIfPlayerNotOnline();
+								return true;
+							} else if(flag.equalsIgnoreCase("nickname")) {
+								if(mkArgs.equalsIgnoreCase("clear")) {
+									chat.setNickname(null);
+								} else {
+									chat.setNickname(mkArgs);
+								}
+								Main.sendMessage(sender, Main.pluginName + "&aSuccessfully set \"&f" + targetName + "&r&a\"'s nickname to: \"&f" + chat.nickname + "&r&a\"!&z&aTheir resulting display name is: \"&f" + chat.getDisplayName() + "&r&a\".");
+								chat.saveAndDisposeIfPlayerNotOnline();
+								return true;
+							} else if(flag.equalsIgnoreCase("suffix")) {
+								if(mkArgs.equalsIgnoreCase("clear")) {
+									chat.setSuffix(null);
+								} else {
+									chat.setSuffix(mkArgs);
+								}
+								Main.sendMessage(sender, Main.pluginName + "&aSuccessfully set \"&f" + targetName + "&r&a\"'s suffix to: \"&f" + chat.suffix + "&r&a\"!&z&aTheir resulting display name is: \"&f" + chat.getDisplayName() + "&r&a\".");
+								chat.saveAndDisposeIfPlayerNotOnline();
+								return true;
+							}
+							Main.sendMessage(sender, Main.pluginName + "&eInvalid flag \"&f" + flag + "&r&e\".");
+						} else if(args.length == 4) {// /chat {targetName} {set} {color|magiccolor} {enable|disable}
+							chat.disposeIfPlayerNotOnline();
+							if(flag.equalsIgnoreCase("set")) {
+								String colorMagic = args[2];
+								String enableDisable = args[3];
+								PlayerPermissions perm = PlayerPermissions.getPlayerPermissions(target);
+								if(colorMagic.equalsIgnoreCase("color")) {
+									if(enableDisable.equalsIgnoreCase("enable")) {
+										perm.setPermission("supercmds.chat.colors", true);
+										Main.sendMessage(sender, Main.pluginName + "&aThe command completed successfully.");
+										perm.saveAndDisposeIfPlayerNotOnline();
+										return true;
+									} else if(enableDisable.equalsIgnoreCase("disable")) {
+										perm.setPermission("supercmds.chat.colors", false);
+										Main.sendMessage(sender, Main.pluginName + "&aThe command completed successfully.");
+										perm.saveAndDisposeIfPlayerNotOnline();
+										return true;
+									} else {
+										Main.sendMessage(sender, Main.pluginName + "&eInvalid flag \"&f" + enableDisable + "&r&e\".");
+									}
+								} else if(colorMagic.equalsIgnoreCase("magiccolor")) {
+									if(enableDisable.equalsIgnoreCase("enable")) {
+										perm.setPermission("supercmds.chat.colors.magic", true);
+										Main.sendMessage(sender, Main.pluginName + "&aThe command completed successfully.");
+										perm.saveAndDisposeIfPlayerNotOnline();
+										return true;
+									} else if(enableDisable.equalsIgnoreCase("disable")) {
+										perm.setPermission("supercmds.chat.colors.magic", false);
+										Main.sendMessage(sender, Main.pluginName + "&aThe command completed successfully.");
+										perm.saveAndDisposeIfPlayerNotOnline();
+										return true;
+									} else {
+										Main.sendMessage(sender, Main.pluginName + "&eInvalid flag \"&f" + enableDisable + "&r&e\".");
+									}
+								} else {
+									Main.sendMessage(sender, Main.pluginName + "&eInvalid flag \"&f" + colorMagic + "&r&e\".");
+								}
+								perm.disposeIfPlayerNotOnline();
+							} else {
+								Main.sendMessage(sender, Main.pluginName + "&eInvalid flag \"&f" + flag + "&r&e\".");
+							}
+						}
+						chat.disposeIfPlayerNotOnline();
+					}
+				}
+				Main.sendMessage(sender, Main.pluginName + "&eUsage: \"&f/" + command + " {targetName} {info}&e\" or \"&f/" + command + " &e\"");
+				return true;
+			}
+			Main.sendMessage(sender, Main.pluginName + "&eThis plugin's '&fhandleChat&e' option was set to &cfalse&e in the config.yml;&z&eTherefore this command has been disabled.");
+			return true;
 		} else if(command.equalsIgnoreCase("invsee") || command.equalsIgnoreCase("peek")) {
 			//TODO Admin command for looking at and/or editing other player's inventories; requires permission
 			return false;
+		} else if(command.equalsIgnoreCase("setwarp")) {// /setwarp {warpname} [requireperm|requiregroup] [perm|groupname]
+			if(!Permissions.hasPerm(sender, "supercmds.use.setwarp")) {
+				Main.sendMessage(sender, Main.pluginName + Main.noPerm);
+				return true;
+			}
+			if(user == null) {
+				Main.sendMessage(sender, Main.getPlayerOnlyMsg());
+				return true;
+			}
+			if(args.length >= 1) {
+				String warpName = args[0];
+				Warp warp = Warps.getWarpByName(warpName);
+				Group group = (args.length == 3 ? (args[1].equalsIgnoreCase("requiregroup") ? Group.getGroupByName(args[2]) : null) : null);
+				String requiredPerm = (args.length == 3 ? (args[1].equalsIgnoreCase("requireperm") ? args[2] : null) : null);
+				if(args.length == 3 && args[1].equalsIgnoreCase("requiregroup") && group == null) {
+					Main.sendMessage(sender, Main.pluginName + "&eThe group \"&f" + args[2] + "&r&e\" does not exist.");
+				} else if(args.length == 3 && args[1].equalsIgnoreCase("requireperm") && (requiredPerm == null || requiredPerm.isEmpty())) {
+					Main.sendMessage(sender, Main.pluginName + "&eA group cannot require a null permission; no one would ever be allowed in the group!");
+				} else if(args.length == 1 || args.length == 3) {
+					if(warp == null) {
+						warp = Warps.createWarp(warpName, user.getLocation(), group, requiredPerm);
+					} else {
+						warp.location = user.getLocation();
+						warp.requiredGroup = group;
+						warp.requiredPermission = requiredPerm;
+					}
+					Main.sendMessage(user, Main.pluginName + "&6/warp " + warp.name + "&a has been set to your current location.");
+					return true;
+				}
+			}
+			Main.sendMessage(user, Main.pluginName + "&eUsage: \"&f/" + command + " {warpname} [requireperm|requiregroup] [perm|groupname]&e\"");
+			return true;
+		} else if(command.equalsIgnoreCase("warp")) {// /warp {warpName}
+			if(!Permissions.hasPerm(sender, "supercmds.use.setwarp")) {
+				Main.sendMessage(sender, Main.pluginName + Main.noPerm);
+				return true;
+			}
+			if(user == null) {
+				Main.sendMessage(sender, Main.getPlayerOnlyMsg());
+				return true;
+			}
+			if(args.length == 1) {
+				String warpName = args[0];
+				Warp warp = Warps.getWarpByName(warpName);
+				if(warp == null) {
+					Main.sendMessage(sender, Main.pluginName + "&eThe warp \"&f" + warpName + "&r&e\" does not exist.&z&aTry setting it with &f/setwarp&a!");
+					return true;
+				}
+				PlayerPermissions perms = PlayerPermissions.getPlayerPermissions(user);
+				if(warp.requiredGroup != null) {
+					if(!perms.isAMemberOfGroup(warp.requiredGroup)) {
+						Main.sendMessage(user, Main.pluginName + "&eYou are not a member of that warp's required group(\"&f" + warp.requiredGroup.displayName + "&r&e\")!");
+						perms = null;
+						return true;
+					}
+				} else if(warp.requiredPermission != null && !warp.requiredPermission.isEmpty()) {
+					if(!perms.hasPermission(warp.requiredPermission)) {
+						Main.sendMessage(user, Main.pluginName + "&eYou do not have the permission that this warp requires(\"&b" + warp.requiredPermission + "&r&e\")!");
+						perms = null;
+						return true;
+					}
+				}
+				if(user.teleport(warp.location)) {
+					Main.sendMessage(user, Main.pluginName + "&aWarping to &6/warp " + warp.name + "&r&a.");
+				} else {
+					Main.sendMessage(user, Main.pluginName + "&eSomething went wrong during the teleport! Is the world loaded in that location?");
+				}
+				perms = null;
+				return true;
+			}
+			Main.sendMessage(user, Main.pluginName + "&eUsage: \"&f/" + command + " {warpname}&e\"");
+			return true;
+		} else if(command.equalsIgnoreCase("warps")) {
+			if(args.length == 0 || (args.length == 1 && args[0].equalsIgnoreCase("list"))) {
+				Main.sendMessage(sender, Main.pluginName + "&aListing all warps...");
+				int i = 0;
+				for(Warp warp : Warps.getAllWarps()) {
+					Main.sendMessage(sender, "&f[&3" + i + "&f]: &6/warp " + warp.name);
+					i++;
+				}
+				return true;
+			}
+			Main.sendMessage(sender, Main.pluginName + "&eUsage: \"&f/" + command + " [list]&e\"");
+			return true;
+		} else if(command.equalsIgnoreCase("rankup") || command.equalsIgnoreCase("nextgroup")) {
+			if(!Permissions.hasPerm(sender, "supercmds.use.rankup") && !Permissions.hasPerm(sender, "supercmds.use.nextgroup")) {
+				Main.sendMessage(sender, Main.pluginName + Main.noPerm);
+				return true;
+			}
+			if(user == null) {
+				Main.sendMessage(sender, Main.getPlayerOnlyMsg());
+				return true;
+			}
+			if(args.length == 0) {
+				PlayerPermissions perms = PlayerPermissions.getPlayerPermissions(user);
+				if(perms.group != null) {
+					if(perms.group.canRankup()) {
+						if(perms.group.nextGroup.costToRankup > 0) {
+							PlayerEcoData eco = PlayerEcoData.getPlayerEcoData(user);
+							if(eco.balance < perms.group.nextGroup.costToRankup) {
+								Main.sendMessage(user, Main.pluginName + "&eYou do not have enough &f" + Main.moneyTerm + "&r&e to rank up to the next group!&z&aYou need &f" + String.format("%.2g%n", new Double(perms.group.nextGroup.costToRankup - eco.balance)) + "&r&a more(the next rank costs &f" + String.format("%.2g%n", new Double(perms.group.nextGroup.costToRankup)) + "&r&a)!");
+								return true;
+							}
+							eco.balance -= perms.group.nextGroup.costToRankup;
+							eco.saveToFile();
+							Main.sendMessage(user, Main.pluginName + "&f" + String.format("%.2g%n", new Double(perms.group.nextGroup.costToRankup)) + "&e &f" + Main.moneyTerm + "&r&e has been taken from your account.");
+						}
+						if(perms.changeGroup(perms.group.nextGroup)) {
+							String msg = Main.pluginName + String.format(Main.playerPromotedMessage, user.getDisplayName(), perms.group.displayName);
+							for(Player player : new ArrayList<>(Main.server.getOnlinePlayers())) {
+								if(!player.getUniqueId().toString().equals(user.getUniqueId().toString())) {
+									Main.sendMessage(player, msg);
+								}
+							}
+							Main.sendConsoleMessage(msg);
+							Main.sendMessage(user, Main.pluginName + "&aYou have been promoted to the \"&f" + perms.group.displayName + "&r&a\" rank!");
+							return true;
+						}
+						Main.sendMessage(user, Main.pluginName + "&eSomething went wrong when attempting to promote you to the next rank!&z&aPlease ask a server administrator politely for assistance.");
+						return true;
+					}
+					Main.sendMessage(user, Main.pluginName + "&eYou are already in the highest rank possible!");
+					return true;
+				}
+				Main.sendMessage(user, Main.pluginName + "&eWhoops! It appears that you were never assigned to a group.&z&aPromoting you to the default group...");
+				if(perms.changeGroup(Group.getDefaultGroup())) {
+					String msg = Main.pluginName + String.format(Main.playerPromotedMessage, user.getDisplayName(), perms.group.displayName);
+					for(Player player : new ArrayList<>(Main.server.getOnlinePlayers())) {
+						if(!player.getUniqueId().toString().equals(user.getUniqueId().toString())) {
+							Main.sendMessage(player, msg);
+						}
+					}
+					Main.sendConsoleMessage(msg);
+					Main.sendMessage(user, Main.pluginName + "&aYou have been promoted to the \"&f" + perms.group.displayName + "&r&a\" rank!");
+					return true;
+				}
+				Main.sendMessage(user, Main.pluginName + "&eSomething went wrong when attempting to promote you to the next rank!&z&aPlease ask a server administrator politely for assistance.");
+				return true;
+			}
+			Main.sendMessage(sender, Main.pluginName + "&eUsage: \"&f/" + command + "&e\"");
+			return true;
 		} else {
 			return false;
 		}
@@ -1172,8 +1605,10 @@ public final strictfp class MainCmdListener implements Listener {
 		Player player = event.getPlayer();
 		PlayerStatus status = PlayerStatus.getPlayerStatus(player);
 		if(event.getAction() == Action.LEFT_CLICK_AIR || event.getAction() == Action.LEFT_CLICK_BLOCK) {
-			if(status.isThorModeOn && player.getItemInHand().getType() == Material.IRON_PICKAXE) {
-				player.getWorld().strikeLightning(player.getTargetBlock(null, 200).getLocation());
+			if(Permissions.hasPerm(player, "supercmds.use.thor")) {
+				if(status.isThorModeOn && player.getItemInHand().getType() == Material.IRON_PICKAXE) {
+					player.getWorld().strikeLightning(player.getTargetBlock(null, 200).getLocation());
+				}
 			}
 		}
 	}
@@ -1391,7 +1826,7 @@ public final strictfp class MainCmdListener implements Listener {
 				} else {
 					vanishedTeam.removePlayer(player);
 				}
-				if(status.isVanishModeOn) {
+				if(status.isVanishModeOn && Permissions.hasPerm(player, "supercmds.use.vanish")) {
 					player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, Integer.MAX_VALUE, 0, false), true);
 					for(Player p : onlinePlayers) {
 						if(!Permissions.hasPerm(p, "supercmds.vanish.exempt") && !p.getUniqueId().toString().equals(player.getUniqueId().toString())) {
@@ -1413,6 +1848,10 @@ public final strictfp class MainCmdListener implements Listener {
 		public static void updatePlayerFlyModeStates() {
 			for(PlayerStatus status : new ArrayList<>(PlayerStatus.statuses)) {
 				if(status.isPlayerOnline()) {
+					if(!Permissions.hasPerm(status.getPlayer(), "supercmds.use.fly") && status.isFlyModeOn) {
+						status.isFlyModeOn = false;
+						Main.sendMessage(status.getPlayer(), Main.pluginName + "&aSet fly mode to " + (status.isFlyModeOn ? "&2true" : "&cfalse") + "&f.");
+					}
 					if(status.isFlyModeOn) {
 						status.getPlayer().setAllowFlight(true);
 					} else if(status.getPlayer().getAllowFlight()) {

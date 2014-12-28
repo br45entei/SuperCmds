@@ -38,11 +38,11 @@ public class Permissions implements Listener {
 			return false;
 		}
 		if(Main.handlePermissions) {
-			if(sender instanceof Player) {
-				return Permissions.hasPerm((Player) sender, perm);
-			}
 			if(sender.isOp()) {
 				return true;
+			}
+			if(sender instanceof Player) {
+				return Permissions.hasPerm((Player) sender, perm);
 			}
 		}
 		return sender.hasPermission(perm);

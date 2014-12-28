@@ -202,6 +202,12 @@ public class YamlMgmtClass {
 			Main.unSpecifiedVarWarning("handleEconomy", "config.yml", Main.pluginName);
 		}
 		try {
+			Main.moneyTerm = Main.formatColorCodes(Main.config.getString("moneyTerm"));
+		} catch(Exception e) {
+			loadedAllVars = false;
+			Main.unSpecifiedVarWarning("moneyTerm", "config.yml", Main.pluginName);
+		}
+		try {
 			Main.handleChat = (Boolean.valueOf(Main.formatColorCodes(Main.config.getString("handleChat")))).booleanValue() == true;
 		} catch(Exception e) {
 			loadedAllVars = false;
@@ -215,11 +221,19 @@ public class YamlMgmtClass {
 		}
 		
 		try {
+			Main.playerPromotedMessage = Main.formatColorCodes(Main.config.getString("playerPromotedMessage"));
+		} catch(Exception e) {
+			loadedAllVars = false;
+			Main.unSpecifiedVarWarning("playerPromotedMessage", "config.yml", Main.pluginName);
+		}
+		
+		try {
 			Main.spawnLocation = SavablePlayerData.getLocationFromConfig("spawnLocation", Main.config);
 		} catch(Exception e) {
 			loadedAllVars = false;
 			Main.sendConsoleMessage("&eWarning! The \"&fspawnLocation&r&e\" option in the config.yml file was set incorrectly! Please set it with a valid set of coords and world UUID or use the in-game /setspawn command.");
 		}
+		
 		return loadedAllVars;
 	}
 }

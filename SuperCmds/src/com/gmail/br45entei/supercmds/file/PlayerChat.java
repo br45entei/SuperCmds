@@ -88,6 +88,7 @@ public class PlayerChat extends SavablePlayerData {
 		Main.sendConsoleMessage("PlayerChat: onPlayerJoinEvent: " + this.name);
 		Player newPlayer = event.getPlayer();
 		if(SavablePlayerData.playerEquals(this.getPlayer(), newPlayer)) {
+			this.name = Main.uuidMasterList.getPlayerNameFromUUID(this.uuid);
 			this.loadFromFile();
 		}
 		newPlayer.setDisplayName(this.getDisplayName());
@@ -109,19 +110,19 @@ public class PlayerChat extends SavablePlayerData {
 	
 	//===================================================================================
 	
-	public static final String getChatFormat(Player player) {
+	public static final String getDisplayName(Player player) {
 		if(player == null) {
 			return null;
 		}
-		return PlayerChat.getChatFormat(player.getUniqueId());
+		return PlayerChat.getDisplayName(player.getUniqueId());
 	}
 	
-	public static final String getChatFormat(UUID uuid) {
+	public static final String getDisplayName(UUID uuid) {
 		if(uuid == null) {
 			return null;
 		}
 		PlayerChat chat = PlayerChat.getPlayerChat(uuid);
-		String rtrn = chat.getChatFormat();
+		String rtrn = chat.getDisplayName();
 		if(!chat.isPlayerOnline()) {
 			chat.dispose();
 		}
@@ -147,8 +148,8 @@ public class PlayerChat extends SavablePlayerData {
 		}
 	}
 	
-	public final String getChatFormat() {
-		return this.getDisplayName() + ": ";
+	public static final String getChatFormat() {
+		return "%s: ";
 	}
 	
 	public static final String getChatPrefix(Player player) {
@@ -177,7 +178,7 @@ public class PlayerChat extends SavablePlayerData {
 				return perm.group.displayName;
 			}
 		}
-		return(this.prefix != null ? this.prefix : "");
+		return(this.prefix != null ? this.prefix : (this.prefix = ""));
 	}
 	
 	public static final void setChatPrefix(Player player, String prefix) {
@@ -192,13 +193,13 @@ public class PlayerChat extends SavablePlayerData {
 			return;
 		}
 		PlayerChat chat = PlayerChat.getPlayerChat(uuid);
-		chat.setChatPrefix(prefix);
+		chat.setPrefix(prefix);
 		if(!chat.isPlayerOnline()) {
 			chat.saveToFileAndDispose();
 		}
 	}
 	
-	public final boolean setChatPrefix(String prefix) {
+	public final boolean setPrefix(String prefix) {
 		if(prefix == null) {
 			prefix = "";
 		}
@@ -249,7 +250,7 @@ public class PlayerChat extends SavablePlayerData {
 	
 	public final boolean setNickname(String nickname) {
 		if(nickname == null) {
-			nickname = "";
+			nickname = Main.uuidMasterList.getPlayerNameFromUUID(this.uuid);
 		}
 		String oldNick = this.nickname;
 		this.nickname = nickname;
@@ -279,7 +280,7 @@ public class PlayerChat extends SavablePlayerData {
 	}
 	
 	public final String getSuffix() {
-		return(this.suffix != null ? this.suffix : "");
+		return(this.suffix != null ? this.suffix : (this.suffix = ""));
 	}
 	
 	public static final void setChatSuffix(Player player, String suffix) {
