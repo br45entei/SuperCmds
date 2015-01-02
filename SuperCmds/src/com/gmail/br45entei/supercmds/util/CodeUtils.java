@@ -91,8 +91,16 @@ public class CodeUtils {
 		return CodeUtils.isStrAValidFloat(s) ? Float.parseFloat(s) : fallBackValue;
 	}
 	
+	public static long getLongFromStr(String s, long fallBackValue) {
+		return CodeUtils.isStrAValidLong(s) ? Long.parseLong(s) : fallBackValue;
+	}
+	
 	public static int getIntFromStr(String s, int fallBackValue) {
 		return CodeUtils.isStrAValidInt(s) ? Integer.parseInt(s) : fallBackValue;
+	}
+	
+	public static short getShortFromStr(String s, short fallBackValue) {
+		return CodeUtils.isStrAValidShort(s) ? Short.parseShort(s) : fallBackValue;
 	}
 	
 	public static int[] toIntArray(Integer[] data) {

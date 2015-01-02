@@ -1,10 +1,10 @@
 #Fat Jar Configuration File
-#Sat Dec 27 02:11:32 CST 2014
+#Tue Dec 30 17:21:26 CST 2014
 onejar.license.required=true
 manifest.classpath=
 manifest.removesigners=false
 onejar.checkbox=false
-jarname=C\:\\Java\\Minecraft\\HuntersMcServ\\plugins\\SuperCmds.jar
+jarname=C\:\\Java\\Minecraft\\SERVERS\\SkyblockServer\\plugins\\SuperCmds.jar
 manifest.mergeall=true
 manifest.mainclass=
 manifest.file=<createnew>

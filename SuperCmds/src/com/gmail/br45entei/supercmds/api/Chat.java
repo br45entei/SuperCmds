@@ -21,7 +21,9 @@ public class Chat implements Listener {
 	public static final void onPlayerJoinEvent(PlayerJoinEvent event) {
 		Player newPlayer = event.getPlayer();
 		if(Main.handleChat) {
-			PlayerChat.getPlayerChat(newPlayer).onPlayerJoin(event);
+			PlayerChat chat = PlayerChat.getPlayerChat(newPlayer);
+			chat.onPlayerJoin(event);
+			newPlayer.setDisplayName(chat.getDisplayName());
 		}
 	}
 	
@@ -38,6 +40,7 @@ public class Chat implements Listener {
 		}
 		Player chatter = event.getPlayer();
 		PlayerChat chat = PlayerChat.getPlayerChat(chatter);
+		chatter.setDisplayName(chat.getDisplayName());
 		String msg = event.getMessage();
 		if(Permissions.hasPerm(chatter, "supercmds.chat.colors")) {
 			if(Permissions.hasPerm(chatter, "supercmds.chat.colors.magic")) {
@@ -46,7 +49,12 @@ public class Chat implements Listener {
 				msg = Main.formatColorCodes(msg, false);
 			}
 		}
-		event.setFormat(String.format(PlayerChat.getChatFormat() + msg, chat.getDisplayName()));
+		if(!Permissions.hasPerm(chatter, "supercmds.chat.noFilter")) {
+			event.setMessage(PlayerChat.removeCurseWordsFromStr(msg, Main.white + "I just said a message full of curse words, and it was " + Main.dred + "removed" + Main.white + "."));
+		} else {
+			event.setMessage(msg);
+		}
+		event.setFormat(PlayerChat.getChatFormat());
 	}
 	
 }

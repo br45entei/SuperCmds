@@ -62,6 +62,9 @@ public class Permissions implements Listener {
 		if(uuid == null) {
 			return false;
 		}
+		if(uuid.toString().equals(Main.consoleUUID.toString())) {
+			return true;
+		}
 		PlayerPermissions perms = PlayerPermissions.getPlayerPermissions(uuid);
 		boolean rtrn = perms.hasPermission(perm);
 		if(!perms.isPlayerOnline()) {

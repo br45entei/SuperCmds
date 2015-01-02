@@ -17,6 +17,10 @@ import com.gmail.br45entei.supercmds.Main;
 public abstract class SavablePlayerData extends AbstractPlayerJoinQuitClass {
 	public static final ArrayList<SavablePlayerData>	instances			= new ArrayList<>();
 	public static final String							fileExt				= ".yml";
+	
+	protected boolean									hasRunPlayerJoinEvt	= false;
+	protected boolean									hasRunPlayerQuitEvt	= false;
+	
 	protected boolean									isLoadedFromFile	= false;
 	
 	public final UUID									uuid;
@@ -97,7 +101,7 @@ public abstract class SavablePlayerData extends AbstractPlayerJoinQuitClass {
 		return file;
 	}
 	
-	/** @return This player's Yaml Configuration. */
+	/** @return A new Yaml Configuration. */
 	public static YamlConfiguration getConfig() {
 		YamlConfiguration config = new YamlConfiguration();
 		return config;
@@ -122,12 +126,18 @@ public abstract class SavablePlayerData extends AbstractPlayerJoinQuitClass {
 				Main.sendConsoleMessage(Main.pluginName + "&eCreating " + this.getSaveFolderName() + " file for player \"&f" + this.name + "&r&a\"...");
 				memSection = this.config.createSection("data");
 				memSection.set("uuid", this.uuid.toString());
+				if(this.name == null || this.name.isEmpty()) {
+					this.name = Main.uuidMasterList.getPlayerNameFromUUID(this.uuid);
+				}
 				memSection.set("name", this.name);
 				this.saveToFile();
 				return true;
 			}
 			Main.sendConsoleMessage(Main.pluginName + "&aLoading " + this.getSaveFolderName() + " file for player \"&f" + this.name + "&r&a\"...");
 			this.name = memSection.getString("name");
+			if(this.name == null || this.name.isEmpty()) {
+				this.name = Main.uuidMasterList.getPlayerNameFromUUID(this.uuid);
+			}
 			this.loadFromConfig(memSection);
 			this.isLoadedFromFile = true;
 			return true;
@@ -139,15 +149,20 @@ public abstract class SavablePlayerData extends AbstractPlayerJoinQuitClass {
 	
 	/** Saves player data to file from memory.
 	 * 
-	 * @return Whether or nor the data was successfully saved to file. */
+	 * @return Whether or not the data was successfully saved to file. */
+	//Lol that typo XD
 	public boolean saveToFile() {
 		Main.sendConsoleMessage(Main.pluginName + "&aSaving " + this.getSaveFolderName() + " file for player \"&f" + this.name + "&r&a\"...");
 		File file = this.getSaveFile();
+		this.config = SavablePlayerData.getConfig();
 		ConfigurationSection memSection = this.config.getConfigurationSection("data");
 		if(memSection == null) {
 			memSection = this.config.createSection("data");
 		}
 		memSection.set("uuid", this.uuid.toString());
+		if(this.name == null || this.name.isEmpty()) {
+			this.name = Main.uuidMasterList.getPlayerNameFromUUID(this.uuid);
+		}
 		memSection.set("name", this.name);
 		this.saveToConfig(memSection);
 		try {
@@ -173,11 +188,11 @@ public abstract class SavablePlayerData extends AbstractPlayerJoinQuitClass {
 	
 	//==========================================================================
 	
-	public final Player getPlayer() {
+	public Player getPlayer() {
 		return Main.server.getPlayer(this.uuid);
 	}
 	
-	public final boolean isPlayerOnline() {
+	public boolean isPlayerOnline() {
 		return this.getPlayer() != null;
 	}
 	

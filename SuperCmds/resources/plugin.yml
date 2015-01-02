@@ -8,7 +8,6 @@ author: Brian_Entei
 website: Plugin site N/A; visit my server at redsandbox.no-ip.org:25565 for assistance or e-mail me at br45entei@gmail.com
 
 main: com.gmail.br45entei.supercmds.Main
-depend: [Vault]
 
 commands:
   hasperm:
@@ -103,17 +102,17 @@ commands:
     aliases: [bal, balance, fe]
   economy:
     description: "Manage player balances and/or credit amounts."
-    usage: "/economy {targetName} {money|credits} {view|add|remove/subtract|set} [amount]"
+    usage: "/economy {targetName} {money|credits} {view|add|remove/subtract|set} [amount] or /economy {targetName} [info]"
     aliases: [eco, econ]
   speed:
     description: "Change a player's walk/fly speed."
     usage: "/speed {targetName} {walk|fly} {amount|reset}"
-  give:
-    description: "Give a player an item."
-    usage: "/give {targetName} {itemName} [amount] [damageValue] [metadata...]"
   hat:
     description: "Put the item you're holding on your head!"
     usage: "/hat"
+  title:
+    description: "Change your chat title or reset it!"
+    usage: "/title {args...|clear}"
   nick:
     description: "Change your display name."
     usage: "'/nick {args...}'. Note that there is a 16 character cut-off limit."
@@ -122,9 +121,9 @@ commands:
     description: "View a player's real name."
     usage: "/realname {targetName}"
     aliases: [ign]
-  chat:
+  managechat:
     description: "Manage custom player prefixes, nicknames, and suffixes."
-    usage: "/chat {targetName} {prefix|nickname|suffix} {args...|clear}"
+    usage: "/managechat {targetName} {prefix|nickname|suffix} {args...|clear}"
   invsee:
     description: "Edit and/or take a look at a player's inventory."
     usage: "/invsee {targetName} {inv|ender/enderchest|armor/armour}"
@@ -138,3 +137,39 @@ commands:
   warps:
     description: "Shows you a list of all available warps."
     usage: "/warps list"
+  delwarp:
+    description: "Delete the specified warp. Players can /delwarp undo to restore a warp."
+    usage: "/delwarp {warpName|undo}"
+  rankup:
+    description: "Promote yourself to the next rank if certain criteria are met."
+    usage: "/rankup"
+    aliases: [nextgroup]
+  mail:
+    description: "Read and send mail to/from players."
+    usage: "/mail send {target} {msg...} or /mail {read|markread|clear|readold}"
+  msg:
+    description: "Chat with a player in private. Supports color codes if you have permission."
+    usage: "/msg {target} {msg...}"
+  r:
+    description: "Reply to the last player that messaged you, or set the player you want to message with /r set {target|clear}"
+    usage: "/r {msg....} or /r {target|clear}"
+  kit:
+    description: "Let players reward themselves with pre-defined kits."
+    usage: "/kit {kitname}"
+    aliases: [kits]
+  smite:
+    description: "Smite those that disobey!"
+    usage: "/smite {targetName} or /smite {worldName} {x} {y} {z}"
+  managekit:
+    description: "Manage player kits."
+    usage: "/managekit {name} {create} or /managekits {name} {set} {reward|items|requiredgroup|requiredperm} {amount|items.../clearitems|groupName/permNode/clear}"
+    aliases: [managekits]
+  loadplugin:
+    description: "Load a plugin from file."
+    usage: "/loadplugin {pluginFile.jar} or /loadplugin -fullpath {full/path/to/pluginFile.jar}"
+  enableplugin:
+    description: "Enable/boot the selected plugin"
+    usage: "/enableplugin {pluginName}"
+  disableplugin:
+    description: "Disable/shut down the selected plugin."
+    usage: "/disableplugin {pluginName}"

@@ -480,7 +480,7 @@ public class UUIDMasterList implements Listener {
 										Main.sendMessage(sender, this.pluginName + "&2[&6OFFLINE_PLAYER&2]: &a\"&f" + this.getPlayerNameFromUUID(uuid) + "&r&a\"'s Universally Unique ID is: \"&f" + this.getUUIDFromPlayerName(args[1]).toString() + "&r&a\"!");
 										return true;
 									}
-									Main.sendMessage(sender, this.pluginName + "&cThe player \"&f" + args[0] + "&r&\" does not exist!");
+									Main.sendMessage(sender, this.pluginName + "&cThe player \"&f" + args[0] + "&r&c\" does not exist(or Mojang's authentication/api servers are down)!");
 									return true;
 								}
 							} else if(args.length == 1) {

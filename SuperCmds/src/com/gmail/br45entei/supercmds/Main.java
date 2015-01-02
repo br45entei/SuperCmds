@@ -1,7 +1,9 @@
 package com.gmail.br45entei.supercmds;
 
 import java.io.File;
+import java.math.RoundingMode;
 import java.text.DateFormat;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -19,9 +21,11 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Chunk;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Server;
+import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
@@ -29,6 +33,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.event.server.RemoteServerCommandEvent;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -38,6 +43,7 @@ import com.gmail.br45entei.supercmds.api.Chat;
 import com.gmail.br45entei.supercmds.api.Economy;
 import com.gmail.br45entei.supercmds.api.Permissions;
 import com.gmail.br45entei.supercmds.cmds.MainCmdListener;
+import com.gmail.br45entei.supercmds.file.Kits;
 import com.gmail.br45entei.supercmds.file.PlayerPermissions;
 import com.gmail.br45entei.supercmds.file.PlayerPermissions.Group;
 import com.gmail.br45entei.supercmds.file.SavablePlayerData;
@@ -48,9 +54,22 @@ import com.gmail.br45entei.supercmds.yml.YamlMgmtClass;
 
 /** @author Brian_Entei */
 public class Main extends JavaPlugin implements Listener {
-	private static Main			instance;
-	public Main					plugin			= this;
-	public static final boolean	forceDebugMsgs	= false;
+	private static Main					instance;
+	public Main							plugin				= this;
+	public static final boolean			forceDebugMsgs		= false;
+	
+	public static final DecimalFormat	decimal				= new DecimalFormat("#0.00");
+	public static final DecimalFormat	decimalRoundUp		= new DecimalFormat("#");
+	public static final DecimalFormat	decimalRoundDown	= new DecimalFormat("#");
+	public static final DateFormat		hourFormatter		= new SimpleDateFormat("HH:mm:ss");
+	
+	public static final UUID			consoleUUID			= UUID.fromString("c1d9e7cb-3dd7-4b52-a3c2-239ba94c8b4d");	//This is just a random uuid that I got from https://www.uuidgenerator.net/, don't worry.
+																														
+	static {
+		Main.decimal.setRoundingMode(RoundingMode.HALF_EVEN);
+		Main.decimalRoundUp.setRoundingMode(RoundingMode.UP);
+		Main.decimalRoundDown.setRoundingMode(RoundingMode.DOWN);
+	}
 	
 	public static final void registerEvents() {
 		Main.server.getPluginManager().registerEvents(Main.instance, Main.instance);
@@ -60,6 +79,7 @@ public class Main extends JavaPlugin implements Listener {
 		Main.server.getPluginManager().registerEvents(new Permissions(), Main.instance);
 		Main.server.getPluginManager().registerEvents(Main.uuidMasterList, Main.getInstance());
 		Warps.getInstance();//registers events for Warps.java in the SavablePluginData class' constructor.
+		Kits.getInstance();//same as warps
 	}
 	
 	public static final Main getInstance() {
@@ -99,7 +119,7 @@ public class Main extends JavaPlugin implements Listener {
 	public static final ChatColor	underline	= ChatColor.UNDERLINE;
 	public static final ChatColor	white		= ChatColor.WHITE;
 	public static final ChatColor	yellow		= ChatColor.YELLOW;
-	public static String			pluginName	= "&f[SuperCmds] [&ePlugin name not yet loaded from config...]&f ";
+	public static String			pluginName	= Main.white + "[" + Main.dred + "SuperCmds" + Main.white + "] ";
 	
 	public static String broadcast(String str) {
 		str = Main.formatColorCodes(str);
@@ -226,14 +246,14 @@ public class Main extends JavaPlugin implements Listener {
 		return rtrn;
 	}
 	
-	public static boolean				enabled					= true;
-	public static final String			getPunctuationChars		= "\\p{Punct}+";
-	public static final String			getWhiteSpaceChars		= "\\s+"/*"\\p{Space}+"*/;
-	public static final String			getAlphaNumericChars	= "\\p{Alnum}+";
-	public static final String			getAlphabetChars		= "\\p{Alpha}+";
-	public static final String			getNumberChars			= "\\p{Digit}+";
-	public static final String			getUpperCaseChars		= "\\p{Lower}+";
-	public static final String			getLowerCaseChars		= "\\p{Upper}+";
+	public static boolean						enabled					= true;
+	public static final String					getPunctuationChars		= "\\p{Punct}+";
+	public static final String					getWhiteSpaceChars		= "\\s+"/*"\\p{Space}+"*/;
+	public static final String					getAlphaNumericChars	= "\\p{Alnum}+";
+	public static final String					getAlphabetChars		= "\\p{Alpha}+";
+	public static final String					getNumberChars			= "\\p{Digit}+";
+	public static final String					getUpperCaseChars		= "\\p{Lower}+";
+	public static final String					getLowerCaseChars		= "\\p{Upper}+";
 	
 	/** The variable used to store messages that are meant to be displayed only
 	 * once.
@@ -243,23 +263,30 @@ public class Main extends JavaPlugin implements Listener {
 	 * @see <a
 	 *      href="http://enteisislandsurvival.no-ip.org/javadoc/index.html">Java
 	 *      Documentation for EnteisCommands</a> */
-	private static ArrayList<String>	oneTimeMessageList		= new ArrayList<>();
+	private static ArrayList<String>			oneTimeMessageList		= new ArrayList<>();
 	
 	// TODO To be loaded from config.yml
-	public static boolean				backupOnStartup			= false;
-	public static boolean				showDebugMsgs			= false;
-	public static String				noPerm					= "";
+	public static boolean						backupOnStartup			= false;
+	public static boolean						showDebugMsgs			= false;
+	public static String						noPerm					= "";
 	
-	public static boolean				handleEconomy			= false;
-	public static String				moneyTerm				= "money";
-	public static boolean				handleChat				= false;
-	public static boolean				handlePermissions		= false;
+	public static boolean						handleEconomy			= false;
+	public static String						moneyTerm				= "money";
+	public static boolean						handleChat				= false;
+	public static boolean						handlePermissions		= false;
 	
-	public static String				playerPromotedMessage	= "&aPlayer &f\"%s\"&r&a was just promoted to the &3%s&r&a rank!";
+	public static String						playerPromotedMessage	= "&aPlayer &f\"PLAYERNAME\"&r&a was just promoted to the &3GROUPNAME&r&a rank!";
+	public static boolean						displayNicknameBrackets	= true;
 	
-	public static Location				spawnLocation			= null;
+	public static Location						spawnLocation			= null;
 	
-	public static String				configVersion			= "";
+	public static String						configVersion			= "";
+	
+	//==========================
+	
+	public static final ArrayList<JavaPlugin>	pluginsUsingMe			= new ArrayList<>();
+	
+	//=====================
 	
 	@Override
 	public void onDisable() {
@@ -270,7 +297,11 @@ public class Main extends JavaPlugin implements Listener {
 			}
 		}
 		Group.saveToStaticFile();
-		Group.disposeAll();
+		//Group.disposeAll();
+		//Warps.getInstance().saveToFile();
+		for(SavablePluginData savable : SavablePluginData.getAllInstances()) {
+			savable.saveToFile();
+		}
 		YamlMgmtClass.saveYamls();
 		Main.sendConsoleMessage(Main.pluginName + "&eVersion " + Main.pdffile.getVersion() + " is now disabled!");
 	}
@@ -295,13 +326,33 @@ public class Main extends JavaPlugin implements Listener {
 		}
 	}
 	
+	private static boolean	isVaultAlreadyInstalled	= false;
+	
 	@Override
 	public void onEnable() {
+		Main.isVaultAlreadyInstalled = Main.server.getPluginManager().getPlugin("Vault") != null;
+		if(!Main.isVaultAlreadyInstalled) {
+			File vault = YamlMgmtClass.getResourceFromStreamAsFile(Main.dataFolder, "Vault-1.5.0.jar", false);
+			try {
+				Plugin v = Main.server.getPluginManager().loadPlugin(vault);
+				if(v != null) {
+					Main.server.getPluginManager().enablePlugin(v);
+					Main.sendConsoleMessage(Main.pluginName + "&6Vault could not be found, so " + Main.pluginName + "&eloaded it manually. The server may need to be restarted for changes to take effect.");
+				} else {
+					Main.sendConsoleMessage(Main.pluginName + "&eVault could not be found and Bukkit was unable to load it manually. A server restart should fix the issue.");
+				}
+			} catch(Throwable ignored) {
+				Main.sendConsoleMessage(Main.pluginName + "&eVault could not be found and " + Main.pluginName + "&efailed to load it manually.");
+			}
+		}
 		Main.console = Main.server.getConsoleSender();
 		Main.consoleSayFormat = "&f[&5" + Main.console.getName() + "&f] ";
 		Main.showDebugMsg(Main.pluginName + "The dataFolderName variable is: \"" + Main.dataFolderName + "\"!", Main.showDebugMsgs);
 		// TODO Loading Files, plugins, etc.
 		YamlMgmtClass.LoadConfig();
+		if(Main.spawnLocation == null) {
+			Main.spawnLocation = Main.server.getWorlds().get(0).getSpawnLocation();
+		}
 		Main.uuidMasterList.onEnable();
 		// TODO End of Loading Files, plugins, etc.
 		if(Main.enabled) {
@@ -311,7 +362,14 @@ public class Main extends JavaPlugin implements Listener {
 				Main.sendConsoleMessage(Main.pluginName + "&cVault Permissions API was not successful.");
 			}
 			Main.registerEvents();
-			Warps.getInstance().loadFromFile();
+			for(SavablePluginData data : SavablePluginData.getAllInstances()) {//Warps.getInstance().loadFromFile();
+				data.loadFromFile();
+			}
+			try {
+				Group.reloadFromFile();
+			} catch(Throwable e) {
+				Main.sendConsoleMessage(Main.pluginName + "&cUnable to load from groups.yml file:&z&4" + Main.throwableToStr(e));
+			}
 			Main.sendConsoleMessage(Main.pluginName + "&aVersion " + Main.pdffile.getVersion() + " is now enabled!");
 			//Back up the config files:
 			if(Main.backupOnStartup) {
@@ -323,8 +381,10 @@ public class Main extends JavaPlugin implements Listener {
 							final String date = CodeUtils.getSystemTime(false, true, true);//Date only, file system safe
 							File backupsFolder = new File(Main.dataFolder, "Config_Backups");
 							backupsFolder.mkdirs();
+							File datedFolder = new File(backupsFolder, date);
+							datedFolder.mkdirs();
 							for(File playerFolder : playerFolders) {
-								File playerZip = new File(backupsFolder, FilenameUtils.getName(playerFolder.getAbsolutePath()) + "_" + date + ".zip");
+								File playerZip = new File(datedFolder, FilenameUtils.getName(playerFolder.getAbsolutePath()) + ".zip");
 								try {
 									playerZip.delete();
 								} catch(Throwable ignored) {
@@ -332,7 +392,7 @@ public class Main extends JavaPlugin implements Listener {
 								FileMgmt.zipDir(playerFolder, playerZip);
 							}
 							for(SavablePluginData data : SavablePluginData.getAllInstances()) {
-								File zipFile = new File(backupsFolder, FilenameUtils.getName(data.getSaveFile().getAbsolutePath()) + "_" + date + ".zip");
+								File zipFile = new File(datedFolder, FilenameUtils.getName(data.getSaveFile().getAbsolutePath()) + ".zip");
 								try {
 									zipFile.delete();
 								} catch(Throwable ignored) {
@@ -348,14 +408,6 @@ public class Main extends JavaPlugin implements Listener {
 						}
 					}
 				});
-			}
-			if(Main.spawnLocation == null) {
-				Main.spawnLocation = Main.server.getWorlds().get(0).getSpawnLocation();
-			}
-			try {
-				Group.reloadFromFile();
-			} catch(Throwable e) {
-				Main.sendConsoleMessage(Main.pluginName + "&cUnable to load from groups.yml file:&z&4" + Main.throwableToStr(e));
 			}
 			try {
 				YamlMgmtClass.getResourceFromStreamAsFile(Main.dataFolder, "permissions.txt", true);
@@ -400,6 +452,20 @@ public class Main extends JavaPlugin implements Listener {
 			timeAndDate = dateFormat.format(date);
 		}
 		return timeAndDate;
+	}
+	
+	public final static Chunk getChunkAtWorldCoords(World world, int x, int z) {
+		Chunk chunk;
+		if(x < 0 && z >= 0) {//X is negative
+			chunk = world.getChunkAt((x / 16) - 1, z / 16);
+		} else if(x >= 0 && z < 0) {//Z is negative
+			chunk = world.getChunkAt(x / 16, (z / 16) - 1);
+		} else if(x < 0 && z < 0) {//X and Z are negative
+			chunk = world.getChunkAt((x / 16) - 1, (z / 16) - 1);
+		} else {//X and Z are positive, do things normally
+			chunk = world.getChunkAt(x / 16, z / 16);
+		}
+		return chunk;
 	}
 	
 	/** Checks str1 against str2(and vice versa) to see if they either equal(case
@@ -543,6 +609,21 @@ public class Main extends JavaPlugin implements Listener {
 			//showDebugMsg("&aDebug: The command(\"" + command + "\") had no arguments.", showDebugMsgs);
 		}
 		return args;
+	}
+	
+	public static final String getElementsFromStringArrayAtIndexAsString(String[] array, int index) {
+		return Main.getElementsFromStringArrayAtIndexAsString(array, index, ' ');
+	}
+	
+	public static final String getElementsFromStringArrayAtIndexAsString(String[] array, int index, char seperatorChar) {
+		if(array == null || index >= array.length) {
+			return "";
+		}
+		String mkArgs = "";
+		for(int i = index; i < array.length; i++) {
+			mkArgs += array[i] + seperatorChar;
+		}
+		return mkArgs.trim();
 	}
 	
 	public static String sendConsoleMessage(String message) {
@@ -970,7 +1051,10 @@ public class Main extends JavaPlugin implements Listener {
 	}
 	
 	@Override
-	public boolean onCommand(final CommandSender sender, final Command cmd, final String command, final String[] args) {
+	public boolean onCommand(final CommandSender sender, final Command cmd, String command, final String[] args) {
+		if(command.startsWith("supercmds:")) {
+			command = command.substring("supercmds:".length());
+		}
 		String strArgs = "";
 		if(!(args.length == 0)) {
 			strArgs = "";
@@ -1104,6 +1188,24 @@ public class Main extends JavaPlugin implements Listener {
 	
 	public static final String getPlayerOnlyMsg() {
 		return Main.pluginName + "&eThis command can only be used by players.";
+	}
+	
+	/** @param name The name that returned null upon uuid lookup request.
+	 * @return The message that is to be sent to the command sender/player */
+	public static final String getNoPlayerMsg(String name) {
+		return Main.pluginName + "&eThe player \"&f" + name + "&r&e\" does not exist(or Mojang's authentication/api servers are down).&z&aPlease check your spelling and try again.";
+	}
+	
+	/** @param name The name that returned null upon searching through bukkit's
+	 *            online players array.
+	 * @return The message that is to be sent to the command sender/player
+	 * @see Bukkit#getOnlinePlayers()
+	 * @see Main#getPlayer(String)
+	 * @see Main#getPlayer(UUID)
+	 * @see Bukkit#getPlayer(String)
+	 * @see Bukkit#getPlayer(UUID) */
+	public static final String getPlayerNotOnlineMsg(String name) {
+		return Main.pluginName + "&eThe player \"&f" + name + "&r&e\" is not online or does not exist.&z&aPlease check your spelling and try again.";
 	}
 	
 }

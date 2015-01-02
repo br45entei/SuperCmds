@@ -74,8 +74,13 @@ public final class PlayerEcoData extends SavablePlayerData {
 	}
 	
 	@Override
-	@EventHandler(priority = EventPriority.HIGHEST)
+	//@EventHandler(priority = EventPriority.HIGHEST)
 	public final void onPlayerJoin(PlayerJoinEvent event) {
+		this.hasRunPlayerQuitEvt = false;
+		if(this.hasRunPlayerJoinEvt) {
+			return;
+		}
+		this.hasRunPlayerJoinEvt = true;
 		Main.sendConsoleMessage("PlayerEcoData: onPlayerJoinEvent: " + this.name);
 		if(SavablePlayerData.playerEquals(this.getPlayer(), event.getPlayer())) {
 			this.loadFromFile();
@@ -85,6 +90,11 @@ public final class PlayerEcoData extends SavablePlayerData {
 	@Override
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public final void onPlayerQuit(PlayerQuitEvent event) {
+		this.hasRunPlayerJoinEvt = false;
+		if(this.hasRunPlayerQuitEvt) {
+			return;
+		}
+		this.hasRunPlayerQuitEvt = true;
 		if(SavablePlayerData.playerEquals(this.getPlayer(), event.getPlayer())) {
 			this.saveToFileAndDispose();
 		}

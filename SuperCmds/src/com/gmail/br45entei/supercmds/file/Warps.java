@@ -7,6 +7,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
+import com.gmail.br45entei.supercmds.Main;
 import com.gmail.br45entei.supercmds.file.PlayerPermissions.Group;
 
 /** @author Brian_Entei */
@@ -51,15 +52,25 @@ public class Warps extends SavablePluginData {
 		for(String key : mem.getKeys(false)) {
 			ConfigurationSection warp = mem.getConfigurationSection(key);
 			if(warp != null) {
-				Warps.warps.add(Warp.getFromConfig(warp));
+				Warp w = Warp.getFromConfig(warp);
+				if(w != null) {
+					Warps.warps.add(w);
+					Main.DEBUG("&aSuccessfully loaded warp from file:&z&3" + w.toString());
+				} else {
+					Main.sendConsoleMessage(Main.pluginName + "&cWarp \"&f" + key + "&r&c\" did not load correctly!");
+				}
+			} else {
+				Main.sendConsoleMessage(Main.pluginName + "&cConfiguration section \"&f" + key + "&r&c\" was null! Cannot load that warp...");
 			}
 		}
+		Main.sendConsoleMessage(Main.pluginName + "&aLoaded &f" + Warps.warps.size() + "&a warps from file.");
 	}
 	
 	@Override
 	public void saveToConfig(ConfigurationSection mem) {
-		// TODO Auto-generated method stub (42!)
-		
+		for(Warp warp : Warps.getAllWarps()) {
+			warp.saveToConfig(mem);
+		}
 	}
 	
 	@Override
@@ -84,6 +95,7 @@ public class Warps extends SavablePluginData {
 		warp.requiredGroup = requiredGroup;
 		warp.requiredPermission = requiredPerm;
 		Warps.warps.add(warp);
+		Warps.getInstance().saveToFile();
 		return warp;
 	}
 	
@@ -92,6 +104,14 @@ public class Warps extends SavablePluginData {
 		public Location		location;
 		public Group		requiredGroup		= null;
 		public String		requiredPermission	= null;
+		
+		@Override
+		public final String toString() {
+			return "&3Name: \"&f" + this.name + "&r&3\";\n" + //
+			"&3Location: \"&f" + this.location.toString() + "&3\"\n" + //
+			"&3Required group: \"&f" + (this.requiredGroup != null ? this.requiredGroup.displayName : "null") + "&r&3\"\n" + //
+			"&3Required permission: \"&f" + this.requiredPermission + "&r&3\";";
+		}
 		
 		private Warp(String name) {
 			this.name = name;
@@ -123,7 +143,9 @@ public class Warps extends SavablePluginData {
 				return false;
 			}
 			this.location = SavablePlayerData.getLocationFromConfig("location", warp);
-			this.requiredGroup = Group.getGroupByName(warp.getString("requiredGroup"));
+			if(Main.handlePermissions) {
+				this.requiredGroup = Group.getGroupByName(warp.getString("requiredGroup"));
+			}
 			this.requiredPermission = warp.getString("requiredPermission");
 			return true;
 		}
@@ -135,9 +157,16 @@ public class Warps extends SavablePluginData {
 			}
 			warp.set("name", this.name);
 			SavablePlayerData.saveLocationToConfig("location", this.location, warp);
-			warp.set("requiredGroup", (this.requiredGroup != null ? this.requiredGroup.name : ""));
+			if(Main.handlePermissions) {
+				warp.set("requiredGroup", (this.requiredGroup != null ? this.requiredGroup.name : ""));
+			}
 			warp.set("requiredPermission", this.requiredPermission);
 			return true;
+		}
+		
+		public final void dispose() {
+			Warps.warps.remove(this);
+			Warps.getInstance().saveToFile();
 		}
 		
 	}

@@ -39,10 +39,15 @@ handleChat: true
 handlePermissions: true
 
 # This is the message that is displayed to everyone when a player gets promoted
-# to the next rank/group. The first %s will be replaced with the player's display name,
-# and the second %s will be replaced with the player's new group display name.
-# Default: "&aPlayer &f\"%s\"&r&a was just promoted to the &3%s&r&a rank!"
-playerPromotedMessage: "&aPlayer &f\"%s\"&r&a was just promoted to the &3%s&r&a rank!"
+# to the next rank/group. PLAYERNAME will be replaced with the player's display name,
+# and GROUPNAME will be replaced with the player's new group display name.
+# Default: "&aPlayer &f\"PLAYERNAME\"&r&a was just promoted to the &3GROUPNAME&r&a rank!"
+playerPromotedMessage: "&aPlayer &f\"PLAYERNAME\"&r&a was just promoted to the &3GROUPNAME&r&a rank!"
+
+# This allows you to control whether or not brackets ('[' and ']') are shown before and after player
+# nick names.
+# Default: true
+displayNicknameBrackets: true
 
 # This is the /spawn location for the server. Be sure to set it in game with
 # the command /setspawn!

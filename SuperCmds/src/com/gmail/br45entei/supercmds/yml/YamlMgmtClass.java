@@ -228,6 +228,13 @@ public class YamlMgmtClass {
 		}
 		
 		try {
+			Main.displayNicknameBrackets = (Boolean.valueOf(Main.formatColorCodes(Main.config.getString("displayNicknameBrackets")))).booleanValue() == true;
+		} catch(Exception e) {
+			loadedAllVars = false;
+			Main.unSpecifiedVarWarning("displayNicknameBrackets", "config.yml", Main.pluginName);
+		}
+		
+		try {
 			Main.spawnLocation = SavablePlayerData.getLocationFromConfig("spawnLocation", Main.config);
 		} catch(Exception e) {
 			loadedAllVars = false;

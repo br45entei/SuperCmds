@@ -4,8 +4,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.inventory.ItemStack;
 
 import com.gmail.br45entei.supercmds.Main;
 
@@ -117,7 +119,8 @@ public abstract class SavablePluginData extends AbstractPlayerJoinQuitClass {
 	public boolean saveToFile() {
 		Main.sendConsoleMessage(Main.pluginName + "&aSaving " + this.name + " file for plugin data \"&f" + this.name + "&r&a\"...");
 		File file = this.getSaveFile();
-		this.config.set("name", this.name);
+		this.config = null;
+		this.getConfig().set("name", this.name);
 		ConfigurationSection memSection = this.config.getConfigurationSection("data");
 		if(memSection == null) {
 			memSection = this.config.createSection("data");
@@ -153,6 +156,44 @@ public abstract class SavablePluginData extends AbstractPlayerJoinQuitClass {
 	
 	public final boolean isDisposed() {
 		return this.isDisposed;
+	}
+	
+	//==========================================================================
+	
+	public static final ItemStack[] getItemsFromConfig(String name, ConfigurationSection root) {
+		if(name == null || name.isEmpty() || root == null) {
+			return new ItemStack[0];
+		}
+		ConfigurationSection items = root.getConfigurationSection(name);
+		if(items == null) {
+			return new ItemStack[0];
+		}
+		ArrayList<ItemStack> its = new ArrayList<>();
+		for(String key : items.getKeys(false)) {
+			ItemStack item = items.getItemStack(key, new ItemStack(Material.AIR));
+			its.add(item);
+		}
+		ItemStack[] rtrn = new ItemStack[its.size()];
+		for(int i = 0; i < rtrn.length; i++) {
+			rtrn[i] = its.get(i);
+		}
+		return rtrn;
+	}
+	
+	public static final boolean saveItemsToConfig(String name, ItemStack[] its, ConfigurationSection root) {
+		if(name == null || name.isEmpty() || root == null) {
+			return false;
+		}
+		ConfigurationSection items = root.getConfigurationSection(name);
+		if(items == null) {
+			items = root.createSection(name);
+		}
+		int i = 0;
+		for(ItemStack item : its) {
+			items.set("ItemStack_" + i, item);
+			i++;
+		}
+		return true;
 	}
 	
 }

@@ -7,3 +7,7 @@ supercmds.use.teleport.toOthers: Allows players to teleport to other players. Th
 supercmds.vanish.exempt: Enables a player to see all players even if they are in vanish mode.
 supercmds.chat.colors: Enables a player to use &f color codes in chat.
 supercmds.chat.colors.magic: Enables a player to use the &k color code in chat.
+supercmds.chat.noFilter: Allows a player to chat without their chat being filtered for curse words.
+supercmds.special.keepInvOnDeath: Enables a player to keep their items if they die.
+supercmds.use.setwarp.require: Enables a player to set a warp that requires players to have a certain permission or be in a certain group
+supercmds.use.managekit.require: Enables a player to change a kit so that it requires players to have a certain permission or be in a certain group in order to be able to use said kit
