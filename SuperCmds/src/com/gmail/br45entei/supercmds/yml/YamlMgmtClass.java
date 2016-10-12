@@ -1,5 +1,9 @@
 package com.gmail.br45entei.supercmds.yml;
 
+import com.gmail.br45entei.supercmds.FileMgmt;
+import com.gmail.br45entei.supercmds.Main;
+import com.gmail.br45entei.supercmds.file.SavablePlayerData;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -8,11 +12,8 @@ import java.io.OutputStream;
 import org.apache.commons.io.FilenameUtils;
 import org.bukkit.configuration.file.YamlConfiguration;
 
-import com.gmail.br45entei.supercmds.FileMgmt;
-import com.gmail.br45entei.supercmds.Main;
-import com.gmail.br45entei.supercmds.file.SavablePlayerData;
-
 /** @author Brian_Entei */
+@SuppressWarnings("javadoc")
 public class YamlMgmtClass {
 	
 	/** Attempts to load a file based on the given file name and parent folder.<br>
@@ -31,7 +32,6 @@ public class YamlMgmtClass {
 			} else if(!overwriteExisting) {
 				return output;
 			}
-			@SuppressWarnings("resource")
 			OutputStream out = new FileOutputStream(output);
 			FileMgmt.copy(Main.class.getResourceAsStream("/" + path), out);
 			try {
@@ -123,7 +123,7 @@ public class YamlMgmtClass {
 		//The following tries to save the FileConfigurations to their Files:
 		Exception e1 = null;
 		try {
-			SavablePlayerData.saveLocationToConfig("spawnLocation", Main.spawnLocation, Main.config);
+			SavablePlayerData.saveLocationToConfig("spawnLocation", Main.getSpawnLocation(), Main.config, false);
 			Main.config.save(Main.configFile);
 		} catch(Exception e) {
 			e1 = e;
@@ -183,6 +183,12 @@ public class YamlMgmtClass {
 			Main.unSpecifiedVarWarning("backupOnStartup", "config.yml", Main.pluginName);
 		}
 		try {
+			Main.enableDownloadUpdates = (Boolean.valueOf(Main.formatColorCodes(Main.config.getString("enableDownloadUpdates")))).booleanValue() == true;
+		} catch(Exception e) {
+			loadedAllVars = false;
+			Main.unSpecifiedVarWarning("enableDownloadUpdates", "config.yml", Main.pluginName);
+		}
+		try {
 			Main.showDebugMsgs = (Main.forceDebugMsgs || (Boolean.valueOf(Main.formatColorCodes(Main.config.getString("showDebugMsgs")))).booleanValue() == true);
 		} catch(Exception e) {
 			loadedAllVars = false;
@@ -206,6 +212,18 @@ public class YamlMgmtClass {
 		} catch(Exception e) {
 			loadedAllVars = false;
 			Main.unSpecifiedVarWarning("moneyTerm", "config.yml", Main.pluginName);
+		}
+		try {
+			Main.creditTerm = Main.formatColorCodes(Main.config.getString("creditTerm"));
+		} catch(Exception e) {
+			loadedAllVars = false;
+			Main.unSpecifiedVarWarning("creditTerm", "config.yml", Main.pluginName);
+		}
+		try {
+			Main.broadcastPrefix = Main.formatColorCodes(Main.config.getString("broadcastPrefix"));
+		} catch(Exception e) {
+			loadedAllVars = false;
+			Main.unSpecifiedVarWarning("broadcastPrefix", "config.yml", Main.pluginName);
 		}
 		try {
 			Main.handleChat = (Boolean.valueOf(Main.formatColorCodes(Main.config.getString("handleChat")))).booleanValue() == true;
@@ -235,7 +253,21 @@ public class YamlMgmtClass {
 		}
 		
 		try {
-			Main.spawnLocation = SavablePlayerData.getLocationFromConfig("spawnLocation", Main.config);
+			Main.displayOperatorJoinQuitMessages = (Boolean.valueOf(Main.formatColorCodes(Main.config.getString("displayOperatorJoinQuitMessages")))).booleanValue() == true;
+		} catch(Exception e) {
+			loadedAllVars = false;
+			Main.unSpecifiedVarWarning("displayOperatorJoinQuitMessages", "config.yml", Main.pluginName);
+		}
+		
+		try {
+			Main.teleportToSpawnOnVoid = (Boolean.valueOf(Main.formatColorCodes(Main.config.getString("teleportToSpawnOnVoid")))).booleanValue() == true;
+		} catch(Exception e) {
+			loadedAllVars = false;
+			Main.unSpecifiedVarWarning("teleportToSpawnOnVoid", "config.yml", Main.pluginName);
+		}
+		
+		try {
+			Main.setSpawnLocation(SavablePlayerData.getLocationFromConfig("spawnLocation", Main.config), true);
 		} catch(Exception e) {
 			loadedAllVars = false;
 			Main.sendConsoleMessage("&eWarning! The \"&fspawnLocation&r&e\" option in the config.yml file was set incorrectly! Please set it with a valid set of coords and world UUID or use the in-game /setspawn command.");
@@ -243,4 +275,5 @@ public class YamlMgmtClass {
 		
 		return loadedAllVars;
 	}
+	
 }

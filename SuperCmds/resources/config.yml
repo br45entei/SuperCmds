@@ -10,6 +10,13 @@ pluginName: "&f[&4Super Cmds&f] "
 # Default: true
 backupOnStartup: true
 
+# This allows you to type "/supercmds updateplugin" to download the latest version of this plugin
+# straight from my personal website. Beware that I may have only just created the latest build and
+# that it may have unforseen bugs/glitches.
+# The plugin is downloaded from: http://redsandbox.no-ip.org/Files/Minecraft/SPIGOT/PLUGINS/For_1.8/SuperCmds.jar
+# This option's default value is false.
+enableDownloadUpdates: false
+
 # ================================================================================
 
 # This allows debugging messages to be sent to the console when the 
@@ -30,6 +37,14 @@ handleEconomy: true
 # Default: "money"
 moneyTerm: "money"
 
+# This allows you to set the word used to describe money.
+# Default: "credits"
+creditTerm: "credits"
+
+# This allows you to change the prefix shown on all broadcast messages.
+# Default: "&f[&4Broadcast&f]"
+broadcastPrefix: "&f[&4Broadcast&f]"
+
 # This allows you to disable or enable this plugin's chat managing features.
 # Default: true
 handleChat: true
@@ -48,6 +63,15 @@ playerPromotedMessage: "&aPlayer &f\"PLAYERNAME\"&r&a was just promoted to the &
 # nick names.
 # Default: true
 displayNicknameBrackets: true
+
+# This allows you to set whether or not player join and quit messages are displayed for
+# opped players.
+# Default: true
+displayOperatorJoinQuitMessages: true
+
+# This allows you to set whether or not players are teleported to spawn upon falling into the void.
+# Default: false
+teleportToSpawnOnVoid: false
 
 # This is the /spawn location for the server. Be sure to set it in game with
 # the command /setspawn!

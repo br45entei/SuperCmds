@@ -1,5 +1,7 @@
 package com.gmail.br45entei.supercmds.file;
 
+import com.gmail.br45entei.supercmds.Main;
+
 import java.util.ArrayList;
 import java.util.UUID;
 
@@ -10,18 +12,19 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
-import com.gmail.br45entei.supercmds.Main;
-
 /** @author Brian_Entei */
+@SuppressWarnings("javadoc")
 public final class PlayerEcoData extends SavablePlayerData {
-	private static final ArrayList<PlayerEcoData>	economies	= new ArrayList<>();
+	private static final ArrayList<PlayerEcoData> economies = new ArrayList<>();
 	
 	public static final ArrayList<PlayerEcoData> getInstances() {
 		return new ArrayList<>(PlayerEcoData.economies);
 	}
 	
-	public double	balance	= 0;
-	public int		credits	= 0;
+	public volatile boolean	wasJustEditedByPlugin	= true;
+	
+	private volatile double	balance					= 0;
+	public volatile int		credits					= 0;
 	
 	private PlayerEcoData(UUID uuid) {
 		super(uuid, Main.uuidMasterList.getPlayerNameFromUUID(uuid));
@@ -39,6 +42,11 @@ public final class PlayerEcoData extends SavablePlayerData {
 	}
 	
 	@Override
+	public final void onFirstLoad() {
+		
+	}
+	
+	@Override
 	public void loadFromConfig(ConfigurationSection mem) {
 		this.balance = mem.getDouble("balance");
 		this.credits = mem.getInt("credits");
@@ -50,11 +58,6 @@ public final class PlayerEcoData extends SavablePlayerData {
 		mem.set("credits", new Integer(this.credits));
 	}
 	
-	public final void saveToFileAndDispose() {
-		this.saveToFile();
-		this.dispose();
-	}
-	
 	public static final PlayerEcoData getPlayerEcoData(Player player) {
 		if(player == null) {
 			return null;
@@ -63,6 +66,9 @@ public final class PlayerEcoData extends SavablePlayerData {
 	}
 	
 	public static final PlayerEcoData getPlayerEcoData(UUID uuid) {
+		if(uuid == null) {
+			return null;
+		}
 		for(PlayerEcoData eco : PlayerEcoData.getInstances()) {
 			if(eco.uuid.toString().equals(uuid.toString())) {
 				return eco;
@@ -73,6 +79,18 @@ public final class PlayerEcoData extends SavablePlayerData {
 		return eco;
 	}
 	
+	public static final boolean doesEcoDataExistFor(UUID uuid) {
+		if(uuid == null) {
+			return false;
+		}
+		for(PlayerEcoData eco : PlayerEcoData.getInstances()) {
+			if(eco.uuid.toString().equals(uuid.toString())) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
 	@Override
 	//@EventHandler(priority = EventPriority.HIGHEST)
 	public final void onPlayerJoin(PlayerJoinEvent event) {
@@ -81,7 +99,7 @@ public final class PlayerEcoData extends SavablePlayerData {
 			return;
 		}
 		this.hasRunPlayerJoinEvt = true;
-		Main.sendConsoleMessage("PlayerEcoData: onPlayerJoinEvent: " + this.name);
+		Main.DEBUG("PlayerEcoData: onPlayerJoinEvent: " + this.name);
 		if(SavablePlayerData.playerEquals(this.getPlayer(), event.getPlayer())) {
 			this.loadFromFile();
 		}
@@ -105,5 +123,19 @@ public final class PlayerEcoData extends SavablePlayerData {
 		super.dispose();
 		PlayerEcoData.economies.remove(this);
 	}
+	
+	//===========
+	
+	public final double getBalance() {
+		return this.balance;
+	}
+	
+	public final PlayerEcoData setBalance(double balance) {
+		this.balance = balance;
+		this.wasJustEditedByPlugin = true;
+		return this;
+	}
+	
+	//===========
 	
 }

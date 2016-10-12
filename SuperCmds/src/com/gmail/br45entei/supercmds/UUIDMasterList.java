@@ -1,5 +1,8 @@
 package com.gmail.br45entei.supercmds;
 
+import com.gmail.br45entei.supercmds.api.Permissions;
+import com.gmail.br45entei.supercmds.yml.YamlMgmtClass;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,10 +23,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
-import com.gmail.br45entei.supercmds.api.Permissions;
-import com.gmail.br45entei.supercmds.yml.YamlMgmtClass;
-
 /** @author Brian_Entei */
+@SuppressWarnings("javadoc")
 public class UUIDMasterList implements Listener {
 	
 	public void DEBUG(String str) {
@@ -183,6 +184,10 @@ public class UUIDMasterList implements Listener {
 	}
 	
 	public UUID getUUIDFromPlayerName(String playerName) {
+		return this.getUUIDFromPlayerName(playerName, false);
+	}
+	
+	public UUID getUUIDFromPlayerName(String playerName, boolean removeColorCodes) {
 		if(UUIDMasterList.isStrUUID(playerName)) {
 			for(String[] curEntry : this.uuidMasterList) {
 				if(curEntry[0].equals(playerName)) {
@@ -190,9 +195,12 @@ public class UUIDMasterList implements Listener {
 				}
 			}
 		}
+		if(removeColorCodes) {
+			playerName = Main.stripColorCodes(Main.formatColorCodes(playerName));
+		}
 		for(String[] curEntry : this.uuidMasterList) {
 			if(curEntry[1].equalsIgnoreCase(playerName)) {
-				return UUID.fromString(curEntry[0]);
+				return UUID.fromString(curEntry[0].replace("_", "-"));
 			}
 		}
 		try {
@@ -413,6 +421,7 @@ public class UUIDMasterList implements Listener {
 		return loadedAllVars;
 	}
 	
+	/** @param cmd unused */
 	public boolean onCommand(final CommandSender sender, final Command cmd, final String command, final String[] args) {
 		String strArgs = "";
 		if(!(args.length == 0)) {
@@ -480,7 +489,7 @@ public class UUIDMasterList implements Listener {
 										Main.sendMessage(sender, this.pluginName + "&2[&6OFFLINE_PLAYER&2]: &a\"&f" + this.getPlayerNameFromUUID(uuid) + "&r&a\"'s Universally Unique ID is: \"&f" + this.getUUIDFromPlayerName(args[1]).toString() + "&r&a\"!");
 										return true;
 									}
-									Main.sendMessage(sender, this.pluginName + "&cThe player \"&f" + args[0] + "&r&c\" does not exist(or Mojang's authentication/api servers are down)!");
+									Main.sendMessage(sender, this.pluginName + "&cThe player \"&f" + args[1] + "&r&c\" does not exist(or Mojang's authentication/api servers are down)!");
 									return true;
 								}
 							} else if(args.length == 1) {

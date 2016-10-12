@@ -1,5 +1,7 @@
 package com.gmail.br45entei.supercmds.file;
 
+import com.gmail.br45entei.supercmds.Main;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -9,13 +11,13 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
 
-import com.gmail.br45entei.supercmds.Main;
-
 /** @author Brian_Entei */
+@SuppressWarnings("javadoc")
 public abstract class SavablePluginData extends AbstractPlayerJoinQuitClass {
-	public static final ArrayList<SavablePluginData>	instances			= new ArrayList<>();
-	public static final String							fileExt				= ".yml";
-	protected boolean									isLoadedFromFile	= false;
+	public static final ArrayList<SavablePluginData>	instances					= new ArrayList<>();
+	public static final String							fileExt						= ".yml";
+	protected boolean									isLoadedFromFile			= false;
+	public boolean										saveAndLoadWithSuperCmds	= true;
 	
 	public static final ArrayList<SavablePluginData> getAllInstances() {
 		return SavablePluginData.instances;
@@ -24,7 +26,7 @@ public abstract class SavablePluginData extends AbstractPlayerJoinQuitClass {
 	public final String			name;
 	private boolean				isDisposed	= false;
 	
-	private YamlConfiguration	config;
+	protected YamlConfiguration	config;
 	
 	/** Create a new SavablePluginData instance. */
 	public SavablePluginData(String name) {
@@ -48,7 +50,7 @@ public abstract class SavablePluginData extends AbstractPlayerJoinQuitClass {
 	/** Gets the folder in which plugin data will be saved.
 	 * 
 	 * @return The folder in which plugin data will be saved. */
-	public final File getSaveFolder() {
+	public File getSaveFolder() {
 		if(this.getSaveFolderName() == null || this.getSaveFolderName().isEmpty()) {
 			return Main.dataFolder;
 		}
@@ -101,6 +103,7 @@ public abstract class SavablePluginData extends AbstractPlayerJoinQuitClass {
 				Main.sendConsoleMessage(Main.pluginName + "&eCreating " + this.name + " file for plugin data \"&f" + this.name + "&r&a\"...");
 				memSection = this.config.createSection("data");
 				this.saveToFile();
+				this.isLoadedFromFile = true;
 				return true;
 			}
 			Main.sendConsoleMessage(Main.pluginName + "&aLoading " + this.name + " file for plugin data \"&f" + this.name + "&r&a\"...");
@@ -117,6 +120,9 @@ public abstract class SavablePluginData extends AbstractPlayerJoinQuitClass {
 	 * 
 	 * @return Whether or nor the data was successfully saved to file. */
 	public boolean saveToFile() {
+		if(!Main.isLoaded) {
+			return false;
+		}
 		Main.sendConsoleMessage(Main.pluginName + "&aSaving " + this.name + " file for plugin data \"&f" + this.name + "&r&a\"...");
 		File file = this.getSaveFile();
 		this.config = null;
@@ -148,6 +154,13 @@ public abstract class SavablePluginData extends AbstractPlayerJoinQuitClass {
 	public abstract void saveToConfig(ConfigurationSection mem);
 	
 	//==========================================================================
+	
+	public void delete() {
+		File saveFile = this.getSaveFile();
+		if(saveFile != null && saveFile.isFile()) {
+			saveFile.delete();
+		}
+	}
 	
 	public void dispose() {
 		SavablePluginData.instances.remove(this);

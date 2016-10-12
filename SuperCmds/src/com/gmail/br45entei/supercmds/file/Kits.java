@@ -1,5 +1,8 @@
 package com.gmail.br45entei.supercmds.file;
 
+import com.gmail.br45entei.supercmds.Main;
+import com.gmail.br45entei.supercmds.file.PlayerPermissions.Group;
+
 import java.util.ArrayList;
 import java.util.Date;
 
@@ -8,18 +11,38 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
 
-import com.gmail.br45entei.supercmds.Main;
-import com.gmail.br45entei.supercmds.file.PlayerPermissions.Group;
-
 /** @author Brian_Entei */
+@SuppressWarnings("javadoc")
 public class Kits extends SavablePluginData {
-	public static final ArrayList<Kit>	kits	= new ArrayList<>();
+	public static final ArrayList<Kit> kits = new ArrayList<>();
 	
 	public static final ArrayList<Kit> getAllKits() {
 		return new ArrayList<>(Kits.kits);
 	}
 	
-	private static Kits	instance;
+	public static final void registerKit(Kit kit) {
+		if(kit == null) {
+			return;
+		}
+		if(Kits.getKitByName(kit.name) == null) {
+			if(!Kits.kits.contains(kit)) {
+				Kits.kits.add(kit);
+				Kits.getInstance().saveToFile();
+			}
+		}
+	}
+	
+	public static final void unregisterKit(Kit kit) {
+		if(kit == null) {
+			return;
+		}
+		if(Kits.kits.contains(kit)) {
+			Kits.kits.remove(kit);
+			Kits.getInstance().saveToFile();
+		}
+	}
+	
+	private static Kits instance;
 	
 	public static final Kits getInstance() {
 		if(Kits.instance == null) {
@@ -97,7 +120,7 @@ public class Kits extends SavablePluginData {
 	
 	public static final class Kit {
 		public final String	name;
-		public long			obtainInterval;						//in system milliseconds!
+		public long			obtainInterval;							//in seconds!
 		public double		rewardMoney			= 0.0;
 		public Group		requiredGroup		= null;
 		public String		requiredPermission	= null;
@@ -106,11 +129,11 @@ public class Kits extends SavablePluginData {
 		@Override
 		public final String toString() {
 			return "&3Name: \"&f" + this.name + "&r&3\";\n" + //
-			"&3Obtain interval(HH:mm:ss): \"&f" + Main.hourFormatter.format(new Date(this.obtainInterval)) + "&3\"\n" + //
-			"&3Reward money: \"&f" + Main.decimal.format(this.rewardMoney) + "&3\"\n" + //
-			"&3Required group: \"&f" + (this.requiredGroup != null ? this.requiredGroup.displayName : "null") + "&r&3\"\n" + //
-			"&3Required permission: \"&f" + this.requiredPermission + "&r&3\"\n" + //
-			"&3# of items: &f" + this.items.length + "&3;";
+					"&3Obtain interval(HH:mm:ss): \"&f" + Main.hourFormatter.format(new Date(this.obtainInterval / 1000)) + "&3\"\n" + //
+					"&3Reward money: \"&f" + Main.decimal.format(this.rewardMoney) + "&3\"\n" + //
+					"&3Required group: \"&f" + (this.requiredGroup != null ? this.requiredGroup.displayName : "null") + "&r&3\"\n" + //
+					"&3Required permission: \"&f" + this.requiredPermission + "&r&3\"\n" + //
+					"&3# of items: &f" + this.items.length + "&3;";
 		}
 		
 		protected Kit(String name) {
@@ -125,8 +148,13 @@ public class Kits extends SavablePluginData {
 			if(name == null) {
 				return null;
 			}
-			Kit rtrn = new Kit(name);
-			rtrn.loadFromConfig(kit);
+			Kit rtrn = Kits.getKitByName(name);
+			if(rtrn == null) {
+				rtrn = new Kit(name);
+			}
+			if(!rtrn.loadFromConfig(kit)) {
+				Main.sendConsoleMessage(Main.pluginName + "&eThe kit \"&f" + rtrn.name + "&r&e\" did not get loaded from the config file correctly!");
+			}
 			return rtrn;
 		}
 		
@@ -134,11 +162,8 @@ public class Kits extends SavablePluginData {
 			if(kit == null) {
 				return false;
 			}
-			if(kit.getString("name") == null || !kit.getString("name").equalsIgnoreCase(this.name)) {
-				return false;
-			}
 			this.obtainInterval = kit.getLong("obtainInterval");
-			this.rewardMoney = kit.getDouble("items");
+			this.rewardMoney = kit.getDouble("rewardMoney");
 			if(Main.handlePermissions) {
 				this.requiredGroup = Group.getGroupByName(kit.getString("requiredGroup"));
 			}
@@ -164,7 +189,7 @@ public class Kits extends SavablePluginData {
 		}
 		
 		public final void dispose() {
-			Kits.kits.remove(this);
+			Kits.unregisterKit(this);
 			Kits.getInstance().saveToFile();
 		}
 		

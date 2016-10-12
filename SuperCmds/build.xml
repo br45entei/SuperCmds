@@ -19,6 +19,12 @@
             <fatjar.jarsource file="C:\Java\Libraries\org.apache.commons\commons-io\2.4\commons-io-2.4.jar" relpath=""/>
             <fatjar.jarsource file="C:\Java\Libraries\org.apache.commons\commons-lang3\3.3.2\commons-lang3-3.3.2.jar" relpath=""/>
         </fatjar.build>
+        <fatjar.build output="C:\Java\Minecraft\SERVERS\viper_girl\plugins\SuperCmds.jar">
+            <fatjar.manifest removesigners="false"/>
+            <fatjar.filesource path="C:\Java\Git\SuperCmds\SuperCmds\bin" relpath=""/>
+            <fatjar.jarsource file="C:\Java\Libraries\org.apache.commons\commons-io\2.4\commons-io-2.4.jar" relpath=""/>
+            <fatjar.jarsource file="C:\Java\Libraries\org.apache.commons\commons-lang3\3.3.2\commons-lang3-3.3.2.jar" relpath=""/>
+        </fatjar.build>
         <fatjar.build output="F:\KeyFocus\KFWS\htdocs\Files\Minecraft\SPIGOT\PLUGINS\For_1.8\SuperCmds.jar">
             <fatjar.manifest removesigners="false"/>
             <fatjar.filesource path="C:\Java\Git\SuperCmds\SuperCmds\bin" relpath=""/>

@@ -1,5 +1,9 @@
 package com.gmail.br45entei.supercmds.api;
 
+import com.gmail.br45entei.supercmds.Main;
+import com.gmail.br45entei.supercmds.file.PlayerPermissions;
+import com.gmail.br45entei.util.StringUtil;
+
 import java.util.UUID;
 
 import org.bukkit.command.CommandSender;
@@ -10,10 +14,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
-import com.gmail.br45entei.supercmds.Main;
-import com.gmail.br45entei.supercmds.file.PlayerPermissions;
-
 /** @author Brian_Entei */
+@SuppressWarnings("javadoc")
 public class Permissions implements Listener {
 	
 	public Permissions() {
@@ -21,12 +23,16 @@ public class Permissions implements Listener {
 	
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public static final void onPlayerJoinEvent(PlayerJoinEvent event) {
+		final long startTime = System.currentTimeMillis();
+		System.out.println("Permissions.onPlayerJoinEvent()");
 		Player newPlayer = event.getPlayer();
 		if(Main.handlePermissions) {
 			PlayerPermissions.getPlayerPermissions(newPlayer).onPlayerJoin(event);
 		}
+		System.out.println("End of Permissions.onPlayerJoinEvent(): " + StringUtil.getElapsedTime(System.currentTimeMillis() - startTime, true));
 	}
 	
+	/** @param event Called when a player leaves a server */
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public static final void onPlayerQuitEvent(PlayerQuitEvent event) {
 	}
@@ -67,9 +73,7 @@ public class Permissions implements Listener {
 		}
 		PlayerPermissions perms = PlayerPermissions.getPlayerPermissions(uuid);
 		boolean rtrn = perms.hasPermission(perm);
-		if(!perms.isPlayerOnline()) {
-			perms.dispose();
-		}
+		perms.disposeIfPlayerNotOnline();
 		return rtrn;
 	}
 	

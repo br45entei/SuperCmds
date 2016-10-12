@@ -2,10 +2,10 @@ name: SuperCmds
 prefix: "Super Cmds"
 version: "0.01"
 description: >
-  A plugin designed to make running a server easier and more fun for everyone. Made by Brian_Entei for the server at 71.8.71.109:25565.
+  A plugin designed to make running a server easier and more fun for everyone. Made by Brian_Entei for the server at xavtious.no-ip.net.#71.8.71.109:25565.
 
 author: Brian_Entei
-website: Plugin site N/A; visit my server at redsandbox.no-ip.org:25565 for assistance or e-mail me at br45entei@gmail.com
+website: Plugin site N/A; visit my server at redsandbox.ddns.net:25565 for assistance or e-mail me at br45entei@gmail.com
 
 main: com.gmail.br45entei.supercmds.Main
 
@@ -19,6 +19,7 @@ commands:
   exit:
     description: "Shorthand admin command for /save-all and /stop. Waits 10 seconds unless argument nowait is passed in."
     usage: "/exit [nowait]"
+    aliases: [reload]
   uuid:
     description: "Checks player uuids and other useful functions."
     usage: "/uuid [playerName|printmasterlist|pml|saveall]"
@@ -38,13 +39,16 @@ commands:
   teleport:
     description: "Teleport to a set of coordinates, to another player, a target player to a set of coords, or even one player to another."
     usage: "/tp {x} {y} {z} or /tp {playerName} or /tp [playerName] {x} {y} {z} or /tp {targetName} {destinationName}"
-    aliases: [tp]
+    aliases: [tp, tphere, tpall]
   sethome:
     description: "Sets your /home to your current location."
     usage: "/sethome"
   home:
     description: "Teleports you to your saved home, or the server spawn if no home is saved."
     usage: "/home"
+  delhome:
+    description: "Deletes the specified home, or restores it."
+    usage: "/delhome or /delhome [homeName] or /delhome undo"
   back:
     description: "Teleports you to the location you were at last before teleporting away."
     usage: "/back"
@@ -81,7 +85,7 @@ commands:
   say:
     description: "Allows you to chat via command; color code enabled if you have permission."
     usage: "/say {args...}"
-    aliases: [chat]
+    aliases: [chat, sya]
   me:
     description: "Submit a 'status update' about yourself in third person to the chat."
     usage: "/me {args...}"
@@ -106,7 +110,7 @@ commands:
     aliases: [eco, econ]
   speed:
     description: "Change a player's walk/fly speed."
-    usage: "/speed {targetName} {walk|fly} {amount|reset}"
+    usage: "/speed {amount|reset} [targetName] [fly|walk]"
   hat:
     description: "Put the item you're holding on your head!"
     usage: "/hat"
@@ -126,7 +130,7 @@ commands:
     usage: "/managechat {targetName} {prefix|nickname|suffix} {args...|clear}"
   invsee:
     description: "Edit and/or take a look at a player's inventory."
-    usage: "/invsee {targetName} {inv|ender/enderchest|armor/armour}"
+    usage: "/invsee {targetName} {inv/inventory|ender/enderchest|armor/armour}"
     aliases: [peek]
   setwarp:
     description: "Set up a public or private warp."
@@ -153,6 +157,10 @@ commands:
   r:
     description: "Reply to the last player that messaged you, or set the player you want to message with /r set {target|clear}"
     usage: "/r {msg....} or /r {target|clear}"
+  repair:
+    description: "Repair the item in your hand with matching materials from your inventory."
+    usage: "/repair"
+    aliases: [fix]
   kit:
     description: "Let players reward themselves with pre-defined kits."
     usage: "/kit {kitname}"
@@ -162,7 +170,7 @@ commands:
     usage: "/smite {targetName} or /smite {worldName} {x} {y} {z}"
   managekit:
     description: "Manage player kits."
-    usage: "/managekit {name} {create} or /managekits {name} {set} {reward|items|requiredgroup|requiredperm} {amount|items.../clearitems|groupName/permNode/clear}"
+    usage: "/managekit {name} {create|delete|info} or /managekits {name} {set} {reward|items|requiredgroup|requiredperm|waittime} {amount|items.../clearitems|groupName/permNode/clear}"
     aliases: [managekits]
   loadplugin:
     description: "Load a plugin from file."
@@ -173,3 +181,60 @@ commands:
   disableplugin:
     description: "Disable/shut down the selected plugin."
     usage: "/disableplugin {pluginName}"
+  mute:
+    description: "Mute or unmute a player for an optional amount of time."
+    usage: "/mute {targetName/targetUUID} [muteTime]"
+    aliases: [unmute]
+  seen:
+    description: "View the last time a player was seen on this server."
+    usage: "/seen {targetName/targetUUID}"
+  staffchat:
+    description: "Chat with other server administrators and staff members."
+    usage: "/staffchat {msg...}"
+  rules:
+    description: "View the server rules."
+    usage: "/rules"
+  broadcast:
+    description: "Sends a message server wide."
+    usage: "/broadcast {msg...}"
+  socialspy:
+    description: "Toggles your SocialSpy mode on or off, allowing you to listen in on other players' private messages."
+    usage: "/socialspy or /socialspy [on|off]"
+  last:
+    description: "Check your own or a target players' last known gamemode, world, or teleport location."
+    usage: "/last {gamemode|world|teleportloc} [target]"
+  set:
+    description: "Set all blocks in a specified region to the specified material and type. For large regions, ensure no players are in the area(including yourself) for faster results. BE CAREFUL when using this command! There is no undo feature, only cancel."
+    usage: "/set {x1} {y1} {z1} {x2} {y2} {z2} {block data...} [world] or '/set cancel' to cancel an ongoing operation."
+    aliases: [replace]
+  ticket:
+    description: "Create and manage reports about server issues."
+    usage: "/ticket create {report.....} or /ticket view [#] or /ticket list {player} | /ticket close {#|player}"
+    aliases: [issue]
+  manageshop:
+    description: "Manage shop items."
+    usage: "/manageshop {add|edit|remove} {shopItemName} [buyPrice] {items|permissions} [items...|permissions...]"
+  purchase:
+    description: "Buy an item or permission with your credits."
+    usage: "/purchase {shopItemName}"
+  ping:
+    description: "Check your connection to the server to see if it is laggy manually(or, you could just type '/'...)."
+    usage: "/ping"
+  give:
+    description: "Give a player an item"
+    usage: "/give @p minecraft:stone 1 3"
+  serializeBlock:
+    description: "Test serialization."
+    usage: "/sb [while looking at a block]"
+    aliases: [sb]
+  deserializeBlock:
+    description: "Test deserialization."
+    usage: "/db [x=0,y=66,z=0]#m@STONE:d@0;"
+    aliases: [db]
+  realtime:
+    description: "View the time of day, local to the server."
+    usage: "/realtime"
+    aliases: [rt]
+  z:
+    description: "Broadcast a custom message."
+    usage: "/z [msg...]"

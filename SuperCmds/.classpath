@@ -2,18 +2,19 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="src" path="resources"/>
-	<classpathentry kind="lib" path="C:/Java/Minecraft/Spigot_1.8_Custom_Build.jar" sourcepath="C:/Java/Minecraft/Spigot-1.8-API.jar"/>
-	<classpathentry kind="lib" path="C:/Java/Libraries/org.apache.commons/commons-io/2.4/commons-io-2.4.jar" sourcepath="C:/Java/Libraries/org.apache.commons/commons-io/2.4/commons-io-2.4-sources.jar">
+	<classpathentry kind="lib" path="E:/Java/Libraries/org.apache.commons/commons-lang3/3.3.2/commons-lang3-3.3.2.jar" sourcepath="E:/Java/Libraries/org.apache.commons/commons-lang3/3.3.2/commons-lang3-3.3.2-sources.jar">
 		<attributes>
-			<attribute name="javadoc_location" value="jar:file:/C:/Java/Libraries/org.apache.commons/commons-io/2.4/commons-io-2.4-javadoc.jar!/"/>
+			<attribute name="javadoc_location" value="jar:file:/E:/Java/Libraries/org.apache.commons/commons-lang3/3.3.2/commons-lang3-3.3.2-javadoc.jar!/"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/Java/Libraries/org.apache.commons/commons-lang3/3.3.2/commons-lang3-3.3.2.jar" sourcepath="C:/Java/Libraries/org.apache.commons/commons-lang3/3.3.2/commons-lang3-3.3.2-sources.jar">
-		<attributes>
-			<attribute name="javadoc_location" value="jar:file:/C:/Java/Libraries/org.apache.commons/commons-lang3/3.3.2/commons-lang3-3.3.2-javadoc.jar!/"/>
-		</attributes>
-	</classpathentry>
+	<classpathentry kind="lib" path="resources/Vault-1.5.3.jar" sourcepath="E:/Java/Libraries/VaultAPI-master.zip"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="resources/Vault-1.5.0.jar" sourcepath="C:/Java/Minecraft/VaultAPI-master.zip"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/CodeLibrary"/>
+	<classpathentry kind="lib" path="E:/Java/Minecraft/buildtools/1.10.2/spigot-1.10.2.jar" sourcepath="E:/Java/Minecraft/buildtools/1.10.2/Spigot/Spigot-API/src/main/java">
+		<attributes>
+			<attribute name="javadoc_location" value="https://hub.spigotmc.org/javadocs/spigot/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry combineaccessrules="false" kind="src" path="/Jline"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

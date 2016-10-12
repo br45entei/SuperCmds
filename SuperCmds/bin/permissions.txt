@@ -3,11 +3,36 @@ supercmds.use.<cmdname>: enables given command for a player/group
 supercmds.use.<cmdname>.others: enable players to perform commands that affect other players in any way
 
 Special-case permissions:
+supercmds.use.gamemode.<gamemode>: Allows a player to swap to a specific gamemode. Use supercmds.use.gamemode.* for access to all gamemodes.
+
 supercmds.use.teleport.toOthers: Allows players to teleport to other players. This is not the same as "supercmds.use.teleport.others", which would allow a player to teleport Bob to Kristie, or Kristie to a set of coords.
 supercmds.vanish.exempt: Enables a player to see all players even if they are in vanish mode.
+
 supercmds.chat.colors: Enables a player to use &f color codes in chat.
 supercmds.chat.colors.magic: Enables a player to use the &k color code in chat.
 supercmds.chat.noFilter: Allows a player to chat without their chat being filtered for curse words.
+supercmds.chat.notilde: Allows players to not have a ~ in front of their name in chat
+supercmds.chat.socialspy: Allows players to listen in on other players' private messages
+
 supercmds.special.keepInvOnDeath: Enables a player to keep their items if they die.
 supercmds.use.setwarp.require: Enables a player to set a warp that requires players to have a certain permission or be in a certain group
 supercmds.use.managekit.require: Enables a player to change a kit so that it requires players to have a certain permission or be in a certain group in order to be able to use said kit
+supercmds.mute.exempt: Allows a player to be un-mutable. Use with care.
+
+/managechat: In addition to the normal "supercmds.use.managechat" permission node, the following permissions also exist:
+supercmds.use.managechat.prefix: Allows a player to use /managechat {targetName} prefix {...}
+supercmds.use.managechat.nickname: Allows a player to use /managechat {targetName} nickname {...}
+supercmds.use.managechat.suffix: Allows a player to use /managechat {targetName} suffix {...}
+supercmds.use.managechat.set.color: Allows a player to use /managechat {targetName} set color {...}
+supercmds.use.managechat.set.magiccolor: Allows a player to use /managechat {targetName} set magiccolor {...}
+
+/invsee: In addition to the normal "supercmds.use.invsee" permission node, the following permissions also exist:
+supercmds.use.invsee.editOthers: Allows players to edit other players' inventories. Without this permission players can only view other players' inventories. Without the command permission, players can't even do that.
+supercmds.use.invsee.enableNoEdit: Allows players to use "/invsee noedit" which means that that player can toggle whether or not they want their inventory to be edited by other players.
+supercmds.use.invsee.override: Allows players(usually admins etc) to edit other players even if that player has chosen to have an un-editable inventory(see above)
+
+/home and /sethome: In addition to the normal "supercmds.use.home" and "supercmds.use.sethome" permission nodes, the following permissions also exist:
+supercmds.homes.<number>: Allows a player to use /home <number> or /sethome <number>. There must be a separate permission node for each number, otherwise omitted numbers will be denied access.
+
+supercmds.quietJoin: Allows a player to join the server without the server broadcasting their presence.
+supercmds.quietQuit: Allows a player to leave the server without the server broadcasting their absence.

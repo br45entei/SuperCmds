@@ -1,5 +1,10 @@
 package com.gmail.br45entei.supercmds.file;
 
+import com.gmail.br45entei.supercmds.Main;
+import com.gmail.br45entei.supercmds.PluginInfo;
+import com.gmail.br45entei.supercmds.api.Permissions;
+import com.gmail.br45entei.supercmds.util.CodeUtils;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -11,13 +16,12 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-
-import com.gmail.br45entei.supercmds.Main;
-import com.gmail.br45entei.supercmds.util.CodeUtils;
+import org.bukkit.plugin.java.JavaPlugin;
 
 /** @author Brian_Entei */
+@SuppressWarnings("javadoc")
 public class PlayerChat extends SavablePlayerData {
-	private static final ArrayList<PlayerChat>	chatInstances	= new ArrayList<>();
+	private static final ArrayList<PlayerChat> chatInstances = new ArrayList<>();
 	
 	public static final ArrayList<PlayerChat> getInstances() {
 		return new ArrayList<>(PlayerChat.chatInstances);
@@ -25,13 +29,21 @@ public class PlayerChat extends SavablePlayerData {
 	
 	public final boolean						isConsole;
 	
-	public String								prefix						= "";
-	public String								nickname					= "";
-	public String								suffix						= "";
+	public volatile String						prefix						= "";
+	public volatile String						nickname					= "";
+	public volatile String						suffix						= "";
 	
-	public UUID									lastPlayerThatIRepliedTo	= null;
+	public volatile UUID						lastPlayerThatIRepliedTo	= null;
 	public final HashMap<UUID, ArrayList<Mail>>	mailbox						= new HashMap<>();
 	public final HashMap<UUID, ArrayList<Mail>>	oldMail						= new HashMap<>();
+	
+	private volatile boolean					isMuted						= false;
+	public volatile long						muteEndTime					= System.currentTimeMillis();
+	private volatile long						timesMuted					= 0;
+	
+	//Don't save the following to file:
+	private volatile long						lastChatTime				= System.currentTimeMillis();
+	private volatile int						numOfQuickChatTimes			= 0;
 	
 	private PlayerChat(UUID uuid) {
 		super(uuid, Main.uuidMasterList.getPlayerNameFromUUID(uuid));
@@ -52,6 +64,42 @@ public class PlayerChat extends SavablePlayerData {
 	
 	//=======================
 	
+	public final void markChatTime() {
+		this.lastChatTime = System.currentTimeMillis();
+	}
+	
+	public final long getLastChatTime() {
+		return this.lastChatTime;
+	}
+	
+	public final boolean nextChatSeemsTooQuick() {
+		return (System.currentTimeMillis() - this.lastChatTime) <= 750L;
+	}
+	
+	public final void incrementQuickChatTimes() {
+		this.numOfQuickChatTimes++;
+	}
+	
+	public final boolean seemsToBeSpamming() {
+		return this.numOfQuickChatTimes > 3;
+	}
+	
+	public final PlayerChat sendMail(UUID sender, String mail) {
+		ArrayList<Mail> targetsMail = this.mailbox.get(sender);
+		if(targetsMail == null) {
+			targetsMail = new ArrayList<>();
+			this.mailbox.put(sender, targetsMail);
+		}
+		targetsMail.add(new Mail(sender, mail, System.currentTimeMillis()));
+		if(this.isPlayerOnline()) {
+			Main.sendMessage(this.getPlayer(), Main.pluginName + "&6You have new mail!&z&aType &f/mail read&a to read it.");
+		}
+		Main.sendMessage(Main.getPlayer(sender), Main.pluginName + "&aYour message was sent to \"&f" + this.getDisplayName() + "&r&a\"'s inbox successfully.");
+		return this;
+	}
+	
+	//=======================
+	
 	@Override
 	public final Player getPlayer() {
 		if(this.isConsole) {
@@ -61,26 +109,76 @@ public class PlayerChat extends SavablePlayerData {
 	}
 	
 	@Override
-	public boolean isPlayerOnline() {
+	public final boolean isPlayerOnline() {
 		if(this.isConsole) {
 			return false;
 		}
 		return super.isPlayerOnline();
 	}
 	
-	//=======================
-	
 	@Override
 	public final String toString() {
 		return "&3PlayerChat:\n" + //
-		"&3Prefix: \"&f" + this.prefix + "&r&3\"\n" + //
-		"&3NickName: \"&f" + this.nickname + "&r&3\"\n" + //
-		"&3Suffix: \"&f" + this.suffix + "&r&3\"";
+				"&3Prefix: \"&f" + this.prefix + "&r&3\"\n" + //
+				"&3NickName: \"&f" + this.nickname + "&r&3\"\n" + //
+				"&3Suffix: \"&f" + this.suffix + "&r&3\"";
+	}
+	
+	//=======================
+	
+	/** @return Whether or not this player is muted. The player may only be
+	 *         muted
+	 *         for a period of time, or muted indefinitely(-1). */
+	public final boolean isMuted() {
+		if(this.muteEndTime == -1L) {
+			this.isMuted = true;
+			return true;
+		}
+		if(this.isMuted) {
+			this.isMuted = this.muteEndTime > System.currentTimeMillis();
+			return this.isMuted;
+		}
+		return false;
+	}
+	
+	/** @param mute Whether or not this player should be considered muted.
+	 * @param millisecondsFor The length of time(in milliseconds!) that this
+	 *            player should be muted for until being able to chat again. Set
+	 *            to 0 for no mute and -1 for infinite mute(muted until further
+	 *            notice etc)
+	 * @return The return value of {@link PlayerChat#isMuted()} after the values
+	 *         are set. */
+	public final boolean setMuted(boolean mute, long millisecondsFor) {
+		if(Permissions.hasPerm(this.uuid, "supercmds.mute.exempt")) {
+			boolean wasMuted = this.isMuted();
+			this.isMuted = false;
+			this.muteEndTime = 0;
+			return mute ? false : (wasMuted ? true : false);
+		}
+		if(this.isMuted() == mute) {
+			return false;
+		}
+		if(millisecondsFor == -1L) {
+			this.isMuted = true;
+			this.muteEndTime = -1L;
+		} else {
+			this.isMuted = mute;
+			this.muteEndTime = System.currentTimeMillis() + millisecondsFor;
+		}
+		if(mute) {
+			this.timesMuted++;
+		}
+		return mute ? this.isMuted() : !this.isMuted();
 	}
 	
 	@Override
 	public String getSaveFolderName() {
 		return "PlayerChatData";
+	}
+	
+	@Override
+	public final void onFirstLoad() {
+		
 	}
 	
 	@Override
@@ -124,6 +222,10 @@ public class PlayerChat extends SavablePlayerData {
 				}
 			}
 		}
+		//==============================
+		this.isMuted = mem.getBoolean("isMuted");
+		this.muteEndTime = mem.getLong("muteEndTime", this.muteEndTime);
+		this.timesMuted = mem.getLong("timesMuted", this.timesMuted);
 	}
 	
 	@Override
@@ -135,6 +237,7 @@ public class PlayerChat extends SavablePlayerData {
 		mem.set("nickname", this.nickname);
 		mem.set("suffix", this.suffix);
 		mem.set("lastPlayerThatIRepliedTo", this.lastPlayerThatIRepliedTo != null ? this.lastPlayerThatIRepliedTo.toString() : "");
+		//=============================
 		ConfigurationSection mailbox = mem.getConfigurationSection("mailbox");
 		if(mailbox == null) {
 			mailbox = mem.createSection("mailbox");
@@ -155,11 +258,10 @@ public class PlayerChat extends SavablePlayerData {
 				mail.saveToConfig(oldMail);
 			}
 		}
-	}
-	
-	public final void saveToFileAndDispose() {
-		this.saveToFile();
-		this.dispose();
+		//=============================
+		mem.set("isMuted", Boolean.valueOf(this.isMuted));
+		mem.set("muteEndTime", Long.valueOf(this.muteEndTime));
+		mem.set("timesMuted", Long.valueOf(this.timesMuted));
 	}
 	
 	public static final PlayerChat getPlayerChat(Player player) {
@@ -188,12 +290,13 @@ public class PlayerChat extends SavablePlayerData {
 			return;
 		}
 		this.hasRunPlayerJoinEvt = true;
-		Main.sendConsoleMessage("PlayerChat: onPlayerJoinEvent: " + this.name);
+		Main.DEBUG("PlayerChat: onPlayerJoinEvent: " + this.name);
 		Player newPlayer = event.getPlayer();
 		if(SavablePlayerData.playerEquals(this.getPlayer(), newPlayer)) {
 			this.name = Main.uuidMasterList.getPlayerNameFromUUID(this.uuid);
 			this.loadFromFile();
 			newPlayer.setDisplayName(this.getDisplayName());
+			newPlayer.setPlayerListName(Main.formatColorCodes(this.getNickName()));
 		}
 	}
 	
@@ -218,6 +321,32 @@ public class PlayerChat extends SavablePlayerData {
 	
 	//===================================================================================
 	
+	public static final PlayerChat getPlayerChatWithNickName(String nickName) {
+		if(nickName == null) {
+			return null;
+		}
+		if(nickName.startsWith("~")) {
+			nickName = nickName.substring(1);
+		}
+		if(nickName.isEmpty()) {
+			return null;
+		}
+		nickName = Main.stripColorCodes(Main.formatColorCodes(nickName));
+		for(UUID uuid : Main.uuidMasterList.getAllListedUUIDS()) {
+			PlayerChat chat = PlayerChat.getPlayerChat(uuid);
+			String nick = chat.getNickName();
+			if(nick.startsWith("~")) {
+				nick = nick.substring(1);
+			}
+			nick = Main.stripColorCodes(Main.formatColorCodes(nick));
+			if(nick.equalsIgnoreCase(nickName)) {
+				return chat;
+			}
+			chat.disposeIfPlayerNotOnline();
+		}
+		return null;
+	}
+	
 	public static final String getDisplayName(Player player) {
 		if(player == null) {
 			return null;
@@ -234,6 +363,9 @@ public class PlayerChat extends SavablePlayerData {
 		if(!chat.isPlayerOnline()) {
 			chat.dispose();
 		}
+		if(rtrn == null || rtrn.isEmpty()) {
+			rtrn = Main.uuidMasterList.getPlayerNameFromUUID(uuid);
+		}
 		return rtrn;
 	}
 	
@@ -241,21 +373,21 @@ public class PlayerChat extends SavablePlayerData {
 		if(this.nickname == null || this.nickname.isEmpty()) {
 			this.nickname = "&f" + this.name;
 		}
-		if(!Main.stripColorCodes(Main.formatColorCodes(this.nickname)).equals(this.name)) {
-			return "~" + this.nickname;
+		if(!Main.stripColorCodes(Main.formatColorCodes(this.nickname)).equals(this.name) && !Permissions.hasPerm(this.uuid, "supercmds.chat.notilde")) {
+			return "&8~&f" + this.nickname;
 		}
 		return this.nickname;
 	}
 	
 	public final String getDisplayName() {
 		if(!this.getPrefix().isEmpty() && !this.getSuffix().isEmpty()) {
-			return Main.formatColorCodes("&f[" + this.getPrefix() + "&r&f] " + (Main.displayNicknameBrackets ? "&f[" + this.getNickName() + "&r&f]" : "&f" + this.getNickName() + "&r&f") + " [" + this.getSuffix() + "&r&f]");
+			return Main.formatColorCodes("&f" + this.getPrefix() + "&r&f " + (Main.displayNicknameBrackets ? "&f[" + this.getNickName() + "&r&f]" : "&f" + this.getNickName() + "&r&f") + " " + this.getSuffix() + "&r&f");
 		} else if(!this.getPrefix().isEmpty()) {
-			return Main.formatColorCodes("&f[" + this.getPrefix() + "&r&f] " + (Main.displayNicknameBrackets ? "&f[" + this.getNickName() + "&r&f]" : "&f" + this.getNickName() + "&r&f"));
+			return Main.formatColorCodes("&f" + this.getPrefix() + "&r&f " + (Main.displayNicknameBrackets ? "&f[" + this.getNickName() + "&r&f]" : "&f" + this.getNickName() + "&r&f"));
 		} else if(!this.getSuffix().isEmpty()) {
-			return Main.formatColorCodes((Main.displayNicknameBrackets ? "&f[" + this.getNickName() + "&r&f]" : "&f" + this.getNickName() + "&r&f") + " [" + this.getSuffix() + "&r&f]");
+			return Main.formatColorCodes((Main.displayNicknameBrackets ? "&f[" + this.getNickName() + "&r&f]" : "&f" + this.getNickName() + "&r&f") + " " + this.getSuffix() + "&r&f");
 		} else {
-			return Main.formatColorCodes("&f[" + this.getNickName() + "&r&f]");
+			return Main.formatColorCodes("&f" + this.getNickName() + "&r&f");
 		}
 	}
 	
@@ -288,7 +420,7 @@ public class PlayerChat extends SavablePlayerData {
 			if(perm != null) {
 				if(perm.group != null) {
 					String displayName = perm.group.displayName;
-					perm.saveAndDisposeIfPlayerNotOnline();
+					perm.disposeIfPlayerNotOnline();
 					return displayName;
 				}
 			}
@@ -371,6 +503,7 @@ public class PlayerChat extends SavablePlayerData {
 		this.nickname = nickname;
 		if(this.isPlayerOnline()) {
 			this.getPlayer().setDisplayName(this.getDisplayName());
+			this.getPlayer().setPlayerListName(Main.formatColorCodes(this.getNickName()));
 		}
 		return !this.nickname.equals(oldNick);
 	}
@@ -430,55 +563,62 @@ public class PlayerChat extends SavablePlayerData {
 	
 	//==============================================================================================
 	
-	public static final HashMap<Integer, String>	curseWordReplacements	= new HashMap<>();
+	public static final HashMap<Integer, String> curseWordReplacements = new HashMap<>();
 	
 	static {
-		PlayerChat.curseWordReplacements.put(new Integer(0), "Ha! I just tried to cuss! Aren't I wonderful!");
-		PlayerChat.curseWordReplacements.put(new Integer(1), "Weee! I just love getting dirty!");
+		PlayerChat.curseWordReplacements.put(new Integer(0), "");//"Ha! I just tried to cuss! Aren't I wonderful!");
+		PlayerChat.curseWordReplacements.put(new Integer(1), "");//"Curse words are fun.");
 		//curseWordReplacements.put(new Integer(2), "");
 	}
 	
 	public static final String getAFunnyReplacementForACurseWord() {
-		int random = Main.getRandomIntValBetween(0, PlayerChat.curseWordReplacements.size() - 1);
+		int random = Main.getRandomIntValBetween(0, PlayerChat.curseWordReplacements.size());
 		return PlayerChat.curseWordReplacements.get(new Integer(random));
 	}
 	
+	public static final boolean containsCurseWords(final String str) {
+		return !str.equals(removeCurseWordsFromStr(str, ""));
+	}
+	
 	public static final String removeCurseWordsFromStr(String str, String fallbackValue) {
-		str = str.replaceAll("(?i)motherfucker", PlayerChat.getAFunnyReplacementForACurseWord());
-		str = str.replaceAll("(?i)fuck", PlayerChat.getAFunnyReplacementForACurseWord());
-		str = str.replaceAll("(?i)shit", PlayerChat.getAFunnyReplacementForACurseWord());
-		str = str.replaceAll("(?i)cunt", "");
-		str = str.replaceAll("(?i)ass", PlayerChat.getAFunnyReplacementForACurseWord());
-		str = str.replaceAll("(?i)a\\$\\$", "");
-		str = str.replaceAll("(?i)@ss", "");
-		str = str.replaceAll("@\\$\\$", "");
-		str = str.replaceAll("(?i)nigger", PlayerChat.getAFunnyReplacementForACurseWord());
-		str = str.replaceAll("(?i)budder", "gold");//XD
-		str = str.replaceAll("(?i)bitch", PlayerChat.getAFunnyReplacementForACurseWord());
-		str = str.replaceAll("(?i)damn", "");
-		str = str.replaceAll("(?i)dammit", PlayerChat.getAFunnyReplacementForACurseWord());
-		str = str.replaceAll("(?i)damit", "");
-		str = str.replaceAll("(?i)f\\*ck", "");
-		str = str.replaceAll("(?i)fu\\*k", "");
-		str = str.replaceAll("(?i)\\*uck", "");
-		str = str.replaceAll("(?i)fuc\\*", "");
-		str = str.replaceAll("(?i)sh\\*t", "");
-		str = str.replaceAll("(?i)shi\\*", "");
-		str = str.replaceAll("(?i)\\*ss", "");
-		str = str.replaceAll("(?i)a\\*\\*", "");
-		str = str.replaceAll("(?i)f\\*\\*\\*", "");
-		str = str.replaceAll("(?i)bi\\*\\*\\*", "");
-		str = str.replaceAll("(?i)b\\*\\*\\*\\*", "");
-		str = str.replaceAll("(?i)whore", "");
-		str = str.replaceAll("(?i)anus", PlayerChat.getAFunnyReplacementForACurseWord());
-		str = str.replaceAll("(?i)faggot", "bundle of sticks");
-		str = str.replaceAll("(?i)gay", "very happy");
-		str = str.replaceAll("(?i)homosexual", "different from others");
-		str = str.replaceAll("(?i)nohomo", "I don't mean to offend");
-		str = str.replaceAll("(?i)homo", "Homo Sapiens Sapiens");
-		str = str.replaceAll("(?i)whale cum", "welcome");
-		str = str.replaceAll("(?i)whalecum", "welcome");
-		//str = str.replaceAll("(?i)", "");
+		//str = Main.GrammarEnforcement(str, Main.dataFolderName);
+		str = Main.replaceWord(str, "motherfucker", PlayerChat.getAFunnyReplacementForACurseWord(), false, Main.dataFolderName);
+		str = Main.replaceWord(str, "fuck", PlayerChat.getAFunnyReplacementForACurseWord(), false, Main.dataFolderName);
+		str = Main.replaceWord(str, "shit", PlayerChat.getAFunnyReplacementForACurseWord(), false, Main.dataFolderName);
+		str = Main.replaceWord(str, "cunt", "", false, Main.dataFolderName);
+		str = Main.replaceWord(str, "ass", PlayerChat.getAFunnyReplacementForACurseWord(), false, Main.dataFolderName);
+		str = Main.replaceWord(str, "a\\$\\$", "", false, Main.dataFolderName);
+		str = Main.replaceWord(str, "@ss", "", false, Main.dataFolderName);
+		str = Main.replaceWord(str, "@\\$\\$", "", false, Main.dataFolderName);
+		str = Main.replaceWord(str, "nigger", PlayerChat.getAFunnyReplacementForACurseWord(), false, Main.dataFolderName);
+		str = Main.replaceWord(str, "budder", "gold", false, Main.dataFolderName);//XD
+		str = Main.replaceWord(str, "bitch", PlayerChat.getAFunnyReplacementForACurseWord(), false, Main.dataFolderName);
+		str = Main.replaceWord(str, "damn", "", false, Main.dataFolderName);
+		str = Main.replaceWord(str, "dammit", PlayerChat.getAFunnyReplacementForACurseWord(), false, Main.dataFolderName);
+		str = Main.replaceWord(str, "damit", "", false, Main.dataFolderName);
+		str = Main.replaceWord(str, "f\\*ck", "", false, Main.dataFolderName);
+		str = Main.replaceWord(str, "fu\\*k", "", false, Main.dataFolderName);
+		str = Main.replaceWord(str, "\\*uck", "", false, Main.dataFolderName);
+		str = Main.replaceWord(str, "fuc\\*", "", false, Main.dataFolderName);
+		str = Main.replaceWord(str, "sh\\*t", "", false, Main.dataFolderName);
+		str = Main.replaceWord(str, "shi\\*", "", false, Main.dataFolderName);
+		str = Main.replaceWord(str, "\\*ss", "", false, Main.dataFolderName);
+		str = Main.replaceWord(str, "a\\*\\*", "", false, Main.dataFolderName);
+		str = Main.replaceWord(str, "f\\*\\*\\*", "", false, Main.dataFolderName);
+		str = Main.replaceWord(str, "bi\\*\\*\\*", "", false, Main.dataFolderName);
+		str = Main.replaceWord(str, "b\\*\\*\\*\\*", "", false, Main.dataFolderName);
+		str = Main.replaceWord(str, "whore", "", false, Main.dataFolderName);
+		str = Main.replaceWord(str, "anus", PlayerChat.getAFunnyReplacementForACurseWord(), false, Main.dataFolderName);
+		str = Main.replaceWord(str, "faggot", "bundle of sticks", false, Main.dataFolderName);
+		str = Main.replaceWord(str, "gay", "very happy", false, Main.dataFolderName);
+		str = Main.replaceWord(str, "homosexual", "different from others", false, Main.dataFolderName);
+		str = Main.replaceWord(str, "nohomo", "I don't mean to offend", false, Main.dataFolderName);
+		str = Main.replaceWord(str, "homo", "Homo Sapiens Sapiens", false, Main.dataFolderName);
+		str = Main.replaceWord(str, "whale cum", "welcome", false, Main.dataFolderName);
+		str = Main.replaceWord(str, "whalecum", "welcome", false, Main.dataFolderName);
+		str = Main.replaceWord(str, "nigga", "", false, Main.dataFolderName);
+		str = Main.replaceWord(str, "nigger", "", false, Main.dataFolderName);
+		//str = Main.replaceWord(str, "", "", false, Main.dataFolderName);
 		if(str.isEmpty()) {
 			return fallbackValue;
 		}
@@ -511,15 +651,6 @@ public class PlayerChat extends SavablePlayerData {
 		return rtrn;
 	}
 	
-	private static final boolean doesArrayContainAnyNullObjects(Object[] array) {
-		for(int i = 0; i < array.length; i++) {
-			if(array[i] == null) {
-				return true;
-			}
-		}
-		return false;
-	}
-	
 	private static final boolean doesArrayContainMail(Mail[] array, Mail mail) {
 		for(Mail m : array) {
 			if(m == mail) {
@@ -529,22 +660,10 @@ public class PlayerChat extends SavablePlayerData {
 		return false;
 	}
 	
-	private static final int getNextFreeIndexInArray(Object[] array) {
-		if(array == null || !PlayerChat.doesArrayContainAnyNullObjects(array)) {
-			return -1;
-		}
-		for(int i = 0; i < array.length; i++) {
-			if(array[i] == null) {
-				return i;
-			}
-		}
-		return -1;
-	}
-	
 	public static final Mail[] getMailsInOrder(ArrayList<Mail> allMails) {//(oldest to newest)
 		Mail[] rtrn = new Mail[allMails.size()];
 		long oldestTimeStamp = Long.MAX_VALUE;
-		while(PlayerChat.doesArrayContainAnyNullObjects(rtrn)) {
+		while(Main.doesArrayContainAnyNullObjects(rtrn)) {
 			Mail tmpOldest = null;
 			for(Mail mail : allMails) {
 				if(mail.timeStamp < oldestTimeStamp && (tmpOldest != null ? mail.timeStamp < tmpOldest.timeStamp : true) && !PlayerChat.doesArrayContainMail(rtrn, mail)) {
@@ -552,7 +671,7 @@ public class PlayerChat extends SavablePlayerData {
 				}
 			}
 			if(tmpOldest != null) {
-				int index = PlayerChat.getNextFreeIndexInArray(rtrn);
+				int index = Main.getNextFreeIndexInArray(rtrn);
 				if(index != -1) {
 					rtrn[index] = tmpOldest;
 				}
@@ -606,14 +725,26 @@ public class PlayerChat extends SavablePlayerData {
 			return true;
 		}
 		
-		/* @Override
-		public final boolean equals(Object obj) {//My version
-			if(obj instanceof Mail) {
-				Mail mail = Mail.class.cast(obj);
-				return(mail.msg.equals(this.msg) && mail.timeStamp == this.timeStamp && mail.sender.toString().equals(this.sender.toString()));
+		public final String getSenderName() {
+			String name = (this.sender.toString().equals(Main.consoleUUID.toString()) ? Main.consoleSayFormat.trim() : Main.uuidMasterList.getPlayerNameFromUUID(this.sender));
+			if(name.isEmpty()) {
+				for(JavaPlugin plugin : Main.pluginsUsingMe) {
+					if(plugin instanceof PluginInfo) {
+						PluginInfo info = (PluginInfo) plugin;
+						if(info.getPluginUUID().toString().equals(this.sender.toString())) {
+							name = info.getDisplayName();
+							break;
+						}
+					}
+				}
 			}
-			return super.equals(obj);
-		} */
+			return name;
+		}
+		
+		@Override
+		public final String toString() {
+			return "&3[" + this.getSenderName() + "]&f: " + this.msg;
+		}
 		
 		public static final Mail getFromConfig(ConfigurationSection mailbox, String key) {
 			if(CodeUtils.isStrAValidLong(key)) {

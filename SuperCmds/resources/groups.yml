@@ -1,14 +1,35 @@
 groups:
   default:
-    displayName: Guest
+    isDefault: false
+    displayName: '&7Guest'
     inheritance: ''
+    nextGroup: 'member'
     permissions:
     - supercmds.info
     - supercmds.use.spawn
     - supercmds.use.say
+    - supercmds.use.rankup
+    - supercmds.use.tpa
+    - supercmds.use.msg
     - esp.info
     - esp.cmd.use.island
+  member:
+    isDefault: false
+    displayName: '&bMember'
+    inheritance: default
+    nextGroup: ''
+    costToRankup: 100.0
+    moneyOrCredit: MONEY
+    permissions:
     - esp.island.menu
+    - supercmds.use.home
+    - supercmds.use.sethome
+    - supercmds.use.warp
+    - supercmds.use.mail
+    - supercmds.use.r
+    - supercmds.use.kit
+    - minecraft.command.plugins
+    - minecraft.command.seed
   ServerHost:
     displayName: Server Host
     inheritance: 'default'
@@ -42,4 +63,4 @@ groups:
     - supercmds.chat.colors.magic
     - supercmds.use.me
     - supercmds.use.permission
-
+    - bukkit.broadcast.admin

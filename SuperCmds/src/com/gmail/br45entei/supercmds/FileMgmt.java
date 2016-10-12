@@ -4,6 +4,7 @@ package com.gmail.br45entei.supercmds;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -12,22 +13,28 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.URI;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.IOUtils;
 
 /** Hosts functions and methods that are used in many different plugins; this
  * class is primarily for ease of access to the filesystem of the host machine.
  * 
  * @since 0.1
  * @author <a
- *         href="http://enteisislandsurvival.no-ip.org/about/author.html">Brian_Entei
+ *         href=
+ *         "http://enteisislandsurvival.no-ip.org/about/author.html">Brian_Entei
  *         </a> */
+@SuppressWarnings("javadoc")
 public class FileMgmt {
-	public static FileMgmt	plugin;
+	public static FileMgmt plugin;
 	
 	public static boolean WriteToFile(File file, String message, boolean wipeOnWrite) {
 		boolean success = false;
@@ -103,7 +110,7 @@ public class FileMgmt {
 		} catch(IOException e) {
 			Main.console.sendMessage(Main.formatColorCodes("&cAn error occurred while attempting to perform the following function: WriteToFile(String filename(\"" + filename + "\"), String message(\"" + message + "\"), boolean wipeOnWrite(\"" + wipeOnWrite + "\"), String folder(\"" + folder + "\"), String dataFolderName(\"" + dataFolderName + "\"))"));
 			e.printStackTrace();/*WriteToFile("crash-reports", "--------------------------", false, "");WriteToFile("crash-reports", e.getMessage(), false, "");*/
-		}// <--That makes an infinite loop of errors, because you are calling a function inside of itself...
+		} // <--That makes an infinite loop of errors, because you are calling a function inside of itself...
 		return writeSuccess;
 	}
 	
@@ -129,7 +136,7 @@ public class FileMgmt {
 		return "";
 	}
 	
-	public static boolean LogCrash(Exception e, String functionName, String msg, boolean printStackTrace, String dataFolderName) {
+	public static boolean LogCrash(Throwable e, String functionName, String msg, boolean printStackTrace, String dataFolderName) {
 		if(msg == null || msg.equals(null)) {
 			msg = "";
 		}
@@ -277,7 +284,7 @@ public class FileMgmt {
 			rtrn = FileMgmt.ReadFromFile(saveTo, dataFolderName);
 		} catch(IOException e) {
 			FileMgmt.LogCrash(e, "ReadFromFile(fileName, folder, dataFolderName)", "An error occurred when attempting to read the file. Check the crash-reports.txt file for more info.", true, dataFolderName);
-		}// <--That makes an infinite loop of errors, because you are calling a function inside of itself...
+		} // <--That makes an infinite loop of errors, because you are calling a function inside of itself...
 		return rtrn;
 	}
 	
@@ -304,7 +311,7 @@ public class FileMgmt {
 			saveTo = new File(newFolder, filename);
 			saveTo.createNewFile();
 			if(saveTo.length() >= 2500000) {//2.5 KiloBytes
-			
+				
 				int num = 1;
 				File newFile = new File(filename + "_" + num);
 				while(newFile.exists()) {
@@ -325,12 +332,47 @@ public class FileMgmt {
 			writeSuccess = true;
 		} catch(IOException e) {
 			e.printStackTrace();/*WriteToFile("crash-reports", "--------------------------", false, "");WriteToFile("crash-reports", e.getMessage(), false, "");*/
-		}// <--That makes an infinite loop of errors, because you are calling a function inside of itself...
+		} // <--That makes an infinite loop of errors, because you are calling a function inside of itself...
 		return writeSuccess;
 	}
 	
 	public static String makeNewDirectoryPath(String filePath, String from, String to) {
 		return filePath.replace(from, to);
+	}
+	
+	public static FileInputStream openInputStream(File file) throws IOException {
+		if(file.exists()) {
+			if(file.isDirectory()) {
+				throw new IOException("File '" + file + "' exists but is a directory");
+			}
+			if(!file.canRead()) {
+				throw new IOException("File '" + file + "' cannot be read");
+			}
+		} else {
+			throw new FileNotFoundException("File '" + file + "' does not exist");
+		}
+		return new FileInputStream(file);
+	}
+	
+	public static FileOutputStream openOutputStream(File file) throws IOException {
+		return FileMgmt.openOutputStream(file, false);
+	}
+	
+	public static FileOutputStream openOutputStream(File file, boolean append) throws IOException {
+		if(file.exists()) {
+			if(file.isDirectory()) {
+				throw new IOException("File '" + file + "' exists but is a directory");
+			}
+			if(!file.canWrite()) {
+				throw new IOException("File '" + file + "' cannot be written to");
+			}
+		} else {
+			File parent = file.getParentFile();
+			if((parent != null) && (!parent.mkdirs()) && (!parent.isDirectory())) {
+				throw new IOException("Directory '" + parent + "' could not be created");
+			}
+		}
+		return new FileOutputStream(file, append);
 	}
 	
 	public static void copyDirectory(final File from, File to) {
@@ -438,15 +480,37 @@ public class FileMgmt {
 		}
 	}
 	
+	public static void copyURLToFile(URL source, File destination) throws IOException {
+		FileMgmt.copyInputStreamToFile(source.openStream(), destination);
+	}
+	
+	public static void copyURLToFile(URL source, File destination, int connectionTimeout, int readTimeout) throws IOException {
+		URLConnection connection = source.openConnection();
+		connection.setConnectTimeout(connectionTimeout);
+		connection.setReadTimeout(readTimeout);
+		FileMgmt.copyInputStreamToFile(connection.getInputStream(), destination);
+	}
+	
+	public static void copyInputStreamToFile(InputStream source, File destination) throws IOException {
+		try {
+			FileOutputStream output = FileMgmt.openOutputStream(destination);
+			try {
+				IOUtils.copy(source, output);
+				output.close();
+			} finally {
+			}
+		} finally {
+			IOUtils.closeQuietly(source);
+		}
+	}
+	
 	public static final void zipFile(final File from, File zipFile) throws IOException {
 		if(from == null || !from.exists()) {
 			return;
 		}
-		@SuppressWarnings("resource")
 		ZipOutputStream out = new ZipOutputStream(new FileOutputStream(zipFile));
 		String zipEntryPath = FilenameUtils.getPath(from.getAbsolutePath().replace(from.getParentFile().getAbsolutePath(), "")) + FilenameUtils.getName(from.getAbsolutePath());
 		byte[] tmpBuf = new byte[1024];
-		@SuppressWarnings("resource")
 		FileInputStream in = new FileInputStream(from);
 		out.putNextEntry(new ZipEntry(zipEntryPath));
 		int len;
@@ -465,7 +529,6 @@ public class FileMgmt {
 	}
 	
 	public static final void zipDir(final File from, File to) throws IOException {
-		@SuppressWarnings("resource")
 		ZipOutputStream out = new ZipOutputStream(new FileOutputStream(to));
 		Deque<File> queue = new LinkedList<>();
 		queue.push(from);
@@ -482,7 +545,6 @@ public class FileMgmt {
 						}
 						try {
 							byte[] tmpBuf = new byte[1024];
-							@SuppressWarnings("resource")
 							FileInputStream in = new FileInputStream(kid);
 							//System.out.println("RootDir: \"" + from.getParentFile().getAbsolutePath() + "\";...");
 							out.putNextEntry(new ZipEntry(zipEntryPath));
@@ -507,6 +569,84 @@ public class FileMgmt {
 			out.close();
 		} catch(Throwable ignored) {
 		}
+	}
+	
+	/*public static void main(String[] args) {
+		if(args.length != 2) {
+			System.out.println("Usage: java.exe -jar FileMgmt.jar zipFilePath folderPath");
+			return;
+		}
+		String zipFilePath = args[0];
+		String folderPath = args[1];
+		File zipFile = new File(zipFilePath);
+		File folder = new File(folderPath);
+		try {
+			if(unZipFile(zipFile, folder)) {
+				System.out.println("Success.");
+			} else {
+				System.err.println("Something when wrong when unzipping files. Is the zip file accessible?");
+			}
+		} catch(Throwable e) {
+			System.err.println("An error occurred:\n" + LogUtils.throwableToStr(e));
+		}
+	}*/
+	
+	public static boolean unZipFile(File zipFile, File folder) throws IOException {
+		if(folder == null || zipFile == null) {
+			return false;
+		}
+		if(!zipFile.exists()) {
+			return false;
+		}
+		if(!folder.exists()) {
+			folder.mkdirs();
+		}
+		byte[] buf = new byte[1024];
+		ZipInputStream zipinputstream = null;
+		ZipEntry zipentry;
+		zipinputstream = new ZipInputStream(new FileInputStream(zipFile));
+		zipentry = zipinputstream.getNextEntry();
+		while(zipentry != null) {
+			String folderPath = folder.getAbsolutePath();
+			if(!folderPath.endsWith("" + File.separatorChar)) {
+				folderPath += File.separatorChar;
+			}
+			String entryName = folderPath + zipentry.getName();
+			entryName = entryName.replace('/', File.separatorChar);
+			entryName = entryName.replace('\\', File.separatorChar);
+			FileOutputStream fileoutputstream = null;
+			File newFile = new File(entryName);
+			if(zipentry.isDirectory()) {
+				newFile.mkdirs();
+				zipinputstream.closeEntry();
+				zipentry = zipinputstream.getNextEntry();
+				continue;
+			}
+			File parentFolder = newFile.getParentFile();
+			if(!parentFolder.exists()) {
+				parentFolder.mkdirs();
+			}
+			try {
+				if(!newFile.exists()) {
+					newFile.createNewFile();
+				}
+				fileoutputstream = new FileOutputStream(newFile);
+				int n;
+				while((n = zipinputstream.read(buf, 0, 1024)) > -1) {
+					fileoutputstream.write(buf, 0, n);
+				}
+				fileoutputstream.close();
+			} catch(IOException e) {
+				Main.sendConsoleMessage("&cUnable to write to file \"&f" + newFile.getAbsolutePath() + "&r&c\":\n&4" + Main.throwableToStr(e));
+			}
+			if(fileoutputstream != null) {
+				fileoutputstream.close();
+			}
+			zipinputstream.closeEntry();
+			zipentry = zipinputstream.getNextEntry();
+		}
+		zipinputstream.close();
+		return true;
 	}
 	
 }

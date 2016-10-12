@@ -1,22 +1,44 @@
 package com.gmail.br45entei.supercmds;
 
+import com.gmail.br45entei.supercmds.api.Chat;
+import com.gmail.br45entei.supercmds.api.Economy_SuperCmds;
+import com.gmail.br45entei.supercmds.api.Permissions;
+import com.gmail.br45entei.supercmds.api.credits.ItemLibrary;
+import com.gmail.br45entei.supercmds.cmds.MainCmdListener;
+import com.gmail.br45entei.supercmds.file.Kits;
+import com.gmail.br45entei.supercmds.file.PlayerChat;
+import com.gmail.br45entei.supercmds.file.PlayerPermissions;
+import com.gmail.br45entei.supercmds.file.PlayerPermissions.Group;
+import com.gmail.br45entei.supercmds.file.PlayerStatus;
+import com.gmail.br45entei.supercmds.file.SavablePlayerData;
+import com.gmail.br45entei.supercmds.file.SavablePluginData;
+import com.gmail.br45entei.supercmds.file.TicketData;
+import com.gmail.br45entei.supercmds.file.Warps;
+import com.gmail.br45entei.supercmds.thread.CmdThread;
+import com.gmail.br45entei.supercmds.util.CodeUtils;
+import com.gmail.br45entei.supercmds.yml.YamlMgmtClass;
+import com.gmail.br45entei.util.StringUtil;
+
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.math.RoundingMode;
+import java.net.URL;
+import java.security.SecureRandom;
 import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Random;
+import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-import net.milkbowl.vault.permission.Permission;
-
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.bukkit.Bukkit;
@@ -24,62 +46,100 @@ import org.bukkit.ChatColor;
 import org.bukkit.Chunk;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.Server;
 import org.bukkit.World;
+import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.server.RemoteServerCommandEvent;
+import org.bukkit.event.server.ServerCommandEvent;
+import org.bukkit.event.server.ServerListPingEvent;
+import org.bukkit.event.world.WorldLoadEvent;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryView;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
-import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitScheduler;
 
-import com.gmail.br45entei.supercmds.api.Chat;
-import com.gmail.br45entei.supercmds.api.Economy;
-import com.gmail.br45entei.supercmds.api.Permissions;
-import com.gmail.br45entei.supercmds.cmds.MainCmdListener;
-import com.gmail.br45entei.supercmds.file.Kits;
-import com.gmail.br45entei.supercmds.file.PlayerPermissions;
-import com.gmail.br45entei.supercmds.file.PlayerPermissions.Group;
-import com.gmail.br45entei.supercmds.file.SavablePlayerData;
-import com.gmail.br45entei.supercmds.file.SavablePluginData;
-import com.gmail.br45entei.supercmds.file.Warps;
-import com.gmail.br45entei.supercmds.util.CodeUtils;
-import com.gmail.br45entei.supercmds.yml.YamlMgmtClass;
+import net.milkbowl.vault.item.ItemInfo;
+import net.milkbowl.vault.item.Items;
 
 /** @author Brian_Entei */
-public class Main extends JavaPlugin implements Listener {
-	private static Main					instance;
-	public Main							plugin				= this;
-	public static final boolean			forceDebugMsgs		= false;
+@SuppressWarnings("javadoc")
+public class Main extends JavaPlugin implements Listener, PluginInfo {
 	
-	public static final DecimalFormat	decimal				= new DecimalFormat("#0.00");
-	public static final DecimalFormat	decimalRoundUp		= new DecimalFormat("#");
-	public static final DecimalFormat	decimalRoundDown	= new DecimalFormat("#");
-	public static final DateFormat		hourFormatter		= new SimpleDateFormat("HH:mm:ss");
+	private static final UUID pluginUUID = UUID.fromString("dcad5c46-4638-4d65-aeac-f52604c15a4e");
 	
-	public static final UUID			consoleUUID			= UUID.fromString("c1d9e7cb-3dd7-4b52-a3c2-239ba94c8b4d");	//This is just a random uuid that I got from https://www.uuidgenerator.net/, don't worry.
-																														
+	public static final UUID getESPUUID() {
+		return UUID.fromString("a4c003a4-ebaa-4775-a9d9-ce8dd9f1b15c");
+	}
+	
+	public static final boolean isESPPresent() {
+		final UUID espUUID = Main.getESPUUID();
+		boolean hasESP = false;
+		for(JavaPlugin plugin : Main.pluginsUsingMe) {
+			if(plugin instanceof PluginInfo) {
+				PluginInfo info = (PluginInfo) plugin;
+				if(espUUID.toString().equals(info.getPluginUUID().toString())) {
+					hasESP = true;
+					break;
+				}
+			}
+		}
+		return hasESP;
+	}
+	
+	protected static Main					instance;
+	public Main								plugin				= this;
+	public static final boolean				forceDebugMsgs		= false;
+	
+	public static final DecimalFormat		decimal				= new DecimalFormat("#0.00");
+	public static final DecimalFormat		decimalRoundUp		= new DecimalFormat("#");
+	public static final DecimalFormat		decimalRoundDown	= new DecimalFormat("#");
+	public static final DateFormat			hourFormatter		= new SimpleDateFormat("HH:mm:ss");
+	
+	public static final UUID				consoleUUID			= UUID.fromString("c1d9e7cb-3dd7-4b52-a3c2-239ba94c8b4d");	//This is just a random uuid that I got from https://www.uuidgenerator.net/, don't worry.
+	
+	public static final HashSet<Material>	transparent			= new HashSet<>();
+	
 	static {
+		transparent.add(Material.AIR);
 		Main.decimal.setRoundingMode(RoundingMode.HALF_EVEN);
 		Main.decimalRoundUp.setRoundingMode(RoundingMode.UP);
 		Main.decimalRoundDown.setRoundingMode(RoundingMode.DOWN);
 	}
 	
+	//public static final int					fNumberOfThreads	= 20;
+	//private static final ThreadPoolExecutor	fThreadPool			= ((ThreadPoolExecutor) Executors.newFixedThreadPool(fNumberOfThreads/*, namedThreadFactory*/));
+	
+	public static final void registerEvents(Listener listener, Plugin plugin) {
+		Main.server.getPluginManager().registerEvents(listener, plugin);
+	}
+	
 	public static final void registerEvents() {
-		Main.server.getPluginManager().registerEvents(Main.instance, Main.instance);
-		Main.server.getPluginManager().registerEvents(new MainCmdListener(), Main.instance);
-		Main.server.getPluginManager().registerEvents(new Economy(), Main.instance);
-		Main.server.getPluginManager().registerEvents(new Chat(), Main.instance);
-		Main.server.getPluginManager().registerEvents(new Permissions(), Main.instance);
-		Main.server.getPluginManager().registerEvents(Main.uuidMasterList, Main.getInstance());
+		registerEvents(Main.instance, Main.instance);
+		registerEvents(MainCmdListener.getInstance(), Main.instance);
+		registerEvents(new Economy_SuperCmds(Main.isVaultInstalled() ? Main.getVault() : Main.instance), Main.instance);
+		registerEvents(new Chat(), Main.instance);
+		registerEvents(new Permissions(), Main.instance);
+		registerEvents(Main.uuidMasterList, Main.getInstance());
 		Warps.getInstance();//registers events for Warps.java in the SavablePluginData class' constructor.
 		Kits.getInstance();//same as warps
+		TicketData.getInstance();//same as warps
 	}
 	
 	public static final Main getInstance() {
@@ -94,6 +154,38 @@ public class Main extends JavaPlugin implements Listener {
 	
 	public static File getPluginFile() {
 		return Main.pluginFile;
+	}
+	
+	public static final String getStringFromListClosestTo(String str, String... list) {
+		return getStringFromListClosestTo(str, -1, list);
+	}
+	
+	public static final String getStringFromListClosestTo(String str, int likenessLimit, String... list) {
+		ArrayList<String> l = new ArrayList<>();
+		for(String s : list) {
+			if(s != null) {
+				l.add(s);
+			}
+		}
+		return getStringFromListClosestTo(l, str, likenessLimit);
+	}
+	
+	public static final String getStringFromListClosestTo(List<String> list, String str) {
+		return getStringFromListClosestTo(list, str, -1);
+	}
+	
+	public static final String getStringFromListClosestTo(List<String> list, String str, int likenessLimit) {
+		String closestStr = null;
+		if(str != null && list != null && !list.isEmpty()) {
+			int closestMatch = Integer.MAX_VALUE;
+			for(String check : list) {
+				int compare = Math.abs(StringUtil.ALPHABETICAL_ORDER.compare(str, check));
+				if(compare < closestMatch && (likenessLimit >= 0 ? compare <= likenessLimit : true)) {
+					closestStr = check;
+				}
+			}
+		}
+		return closestStr;
 	}
 	
 	public static final String		rwhite		= ChatColor.RESET + "" + ChatColor.WHITE;
@@ -119,7 +211,7 @@ public class Main extends JavaPlugin implements Listener {
 	public static final ChatColor	underline	= ChatColor.UNDERLINE;
 	public static final ChatColor	white		= ChatColor.WHITE;
 	public static final ChatColor	yellow		= ChatColor.YELLOW;
-	public static String			pluginName	= Main.white + "[" + Main.dred + "SuperCmds" + Main.white + "] ";
+	public static String			pluginName	= Main.white + "[" + Main.dred + "Super Cmds" + Main.white + "] ";
 	
 	public static String broadcast(String str) {
 		str = Main.formatColorCodes(str);
@@ -135,6 +227,14 @@ public class Main extends JavaPlugin implements Listener {
 	 * @return The given string with ChatColor. */
 	public static String formatColorCodes(String str) {
 		return str.replaceAll("(?i)&w", Main.white + "").replaceAll("(?i)&_", Main.rwhite).replaceAll("(?i)&b", Main.aqua + "").replaceAll("(?i)&0", Main.black + "").replaceAll("(?i)&9", Main.blue + "").replaceAll("(?i)&l", Main.bold + "").replaceAll("(?i)&3", Main.daqua + "").replaceAll("(?i)&1", Main.dblue + "").replaceAll("(?i)&8", Main.dgray + "").replaceAll("(?i)&2", Main.dgreen + "").replaceAll("(?i)&5", Main.dpurple + "").replaceAll("(?i)&4", Main.dred + "").replaceAll("(?i)&6", Main.gold + "").replaceAll("(?i)&7", Main.gray + "").replaceAll("(?i)&a", Main.green + "").replaceAll("(?i)&o", Main.italic + "").replaceAll("(?i)&d", Main.lpurple + "").replaceAll("(?i)&k", Main.magic + "").replaceAll("(?i)&c", Main.red + "").replaceAll("(?i)&m", Main.striken + "").replaceAll("(?i)&n", Main.underline + "").replaceAll("(?i)&f", Main.white + "").replaceAll("(?i)&e", Main.yellow + "").replaceAll("(?i)&r", Main.reset + "").replaceAll("(?i)§w", Main.white + "").replaceAll("(?i)§_", Main.rwhite).replaceAll("(?i)§b", Main.aqua + "").replaceAll("(?i)§0", Main.black + "").replaceAll("(?i)§9", Main.blue + "").replaceAll("(?i)§l", Main.bold + "").replaceAll("(?i)§3", Main.daqua + "").replaceAll("(?i)§1", Main.dblue + "").replaceAll("(?i)§8", Main.dgray + "").replaceAll("(?i)§2", Main.dgreen + "").replaceAll("(?i)§5", Main.dpurple + "").replaceAll("(?i)§4", Main.dred + "").replaceAll("(?i)§6", Main.gold + "").replaceAll("(?i)§7", Main.gray + "").replaceAll("(?i)§a", Main.green + "").replaceAll("(?i)§o", Main.italic + "").replaceAll("(?i)§d", Main.lpurple + "").replaceAll("(?i)§k", Main.magic + "").replaceAll("(?i)§c", Main.red + "").replaceAll("(?i)§m", Main.striken + "").replaceAll("(?i)§n", Main.underline + "").replaceAll("(?i)§f", Main.white + "").replaceAll("(?i)§e", Main.yellow + "").replaceAll("(?i)§r", Main.reset + "");
+	}
+	
+	/** @param str String
+	 * @return The given string without ChatColor. Does not remove the ChatColor
+	 *         codes(i.e. "&f" or "§4"). */
+	public static String escapeColorCodes(String str) {
+		return str.replaceAll("(?i)&w", "&&rw").replaceAll("(?i)&b", "&&rb").replaceAll("&0", "&&r0").replaceAll("&9", "&&r9").replaceAll("(?i)&l", "&&rl").replaceAll("&3", "&&r3").replaceAll("&1", "&&r1").replaceAll("&8", "&&r8").replaceAll("&2", "&&r2").replaceAll("&5", "&&r5").replaceAll("&4", "&&r4").replaceAll("&6", "&&r6").replaceAll("&7", "&&r7").replaceAll("(?i)&a", "&&ra").replaceAll("(?i)&o", "&&ro").replaceAll("(?i)&d", "&&rd").replaceAll("(?i)&k", "&&rk").replaceAll("(?i)&c", "&&rc").replaceAll("(?i)&m", "&&rm").replaceAll("(?i)&n", "&&rn").replaceAll("(?i)&f", "&&rf").replaceAll("(?i)&e", "&&re").replaceAll("(?i)&r", "&&rr").//
+				replaceAll("(?i)\u00A7w", "&&rw").replaceAll("(?i)\u00A7b", "&&rb").replaceAll("\u00A70", "&&r0").replaceAll("\u00A79", "&&r9").replaceAll("(?i)\u00A7l", "&&rl").replaceAll("\u00A73", "&&r3").replaceAll("\u00A71", "&&r1").replaceAll("\u00A78", "&&r8").replaceAll("\u00A72", "&&r2").replaceAll("\u00A75", "&&r5").replaceAll("\u00A74", "&&r4").replaceAll("\u00A76", "&&r6").replaceAll("\u00A77", "&&r7").replaceAll("(?i)\u00A7a", "&&ra").replaceAll("(?i)\u00A7o", "&&ro").replaceAll("(?i)\u00A7d", "&&rd").replaceAll("(?i)\u00A7k", "&&rk").replaceAll("(?i)\u00A7c", "&&rc").replaceAll("(?i)\u00A7m", "&&rm").replaceAll("(?i)\u00A7n", "&&rn").replaceAll("(?i)\u00A7f", "&&rf").replaceAll("(?i)\u00A7e", "&&re").replaceAll("(?i)\u00A7r", "&&rr");
 	}
 	
 	/** @param str String
@@ -160,7 +260,7 @@ public class Main extends JavaPlugin implements Listener {
 	public static final String stackTraceElementsToStr(StackTraceElement[] stackTraceElements) {
 		String str = "";
 		for(StackTraceElement stackTrace : stackTraceElements) {
-			str += (!stackTrace.toString().startsWith("Caused By") ? "     at " : "") + stackTrace.toString() + "\n";
+			str += (!stackTrace.toString().startsWith("Caused By") ? "     at " : "") + stackTrace.toString() + "\r\n";
 		}
 		return str;
 	}
@@ -170,13 +270,13 @@ public class Main extends JavaPlugin implements Listener {
 	public static final String throwableToStr(Throwable t) {
 		String str = t.getClass().getName() + ": ";
 		if((t.getMessage() != null) && !t.getMessage().isEmpty()) {
-			str += t.getMessage() + "\n";
+			str += t.getMessage() + "\r\n";
 		} else {
-			str += "\n";
+			str += "\r\n";
 		}
 		str += Main.stackTraceElementsToStr(t.getStackTrace());
 		if(t.getCause() != null) {
-			str += "Caused by:\n" + Main.throwableToStr(t.getCause());
+			str += "Caused by:\r\n" + Main.throwableToStr(t.getCause());
 		}
 		return str;
 	}
@@ -192,18 +292,15 @@ public class Main extends JavaPlugin implements Listener {
 	/** Yes, I set a FileConfiguration object as a static member. Problem?
 	 * 
 	 * @see <a
-	 *      href="http://wiki.bukkit.org/Configuration_API_Reference#The_Configuration_Object">http://wiki.bukkit.org/Configuration_API_Reference#The_Configuration_Object</a> */
+	 *      href=
+	 *      "http://wiki.bukkit.org/Configuration_API_Reference#The_Configuration_Object">http://wiki.bukkit.org/Configuration_API_Reference#The_Configuration_Object</a> */
 	public static FileConfiguration		config;
 	public static File					configFile		= null;
 	public static String				configFileName	= "config.yml";
 	public static String				consoleSayFormat;
 	public static CommandSender			rcon;
 	
-	public static final UUIDMasterList	uuidMasterList;
-	
-	static {
-		uuidMasterList = new UUIDMasterList();
-	}
+	public static final UUIDMasterList	uuidMasterList	= new UUIDMasterList();
 	
 	public static boolean isStringUUID(String str) {
 		try {
@@ -213,16 +310,37 @@ public class Main extends JavaPlugin implements Listener {
 		}
 	}
 	
-	public static final Player getPlayer(UUID uuid) {
-		Player player = null;
-		if(uuid != null) {
-			for(Player curPlayer : Main.server.getOnlinePlayers()) {
-				if(curPlayer.getUniqueId().toString().equals(uuid.toString())) {
-					return curPlayer;
+	public static final World getWorld(String str) {
+		if(str != null) {
+			for(World world : Main.server.getWorlds()) {
+				if(world.getName().equalsIgnoreCase(str)) {
+					return world;
 				}
 			}
 		}
-		return player;
+		return null;
+	}
+	
+	public static final World getWorld(UUID uuid) {
+		if(uuid != null) {
+			for(World world : Main.server.getWorlds()) {
+				if(world.getUID().toString().equals(uuid.toString())) {
+					return world;
+				}
+			}
+		}
+		return null;
+	}
+	
+	public static final Player getPlayer(UUID uuid) {
+		if(uuid != null) {
+			for(Player player : new ArrayList<>(Main.server.getOnlinePlayers())) {
+				if(player.getUniqueId().toString().equals(uuid.toString())) {
+					return player;
+				}
+			}
+		}
+		return null;
 	}
 	
 	public static Player getPlayer(String name) {
@@ -246,68 +364,117 @@ public class Main extends JavaPlugin implements Listener {
 		return rtrn;
 	}
 	
-	public static boolean						enabled					= true;
-	public static final String					getPunctuationChars		= "\\p{Punct}+";
-	public static final String					getWhiteSpaceChars		= "\\s+"/*"\\p{Space}+"*/;
-	public static final String					getAlphaNumericChars	= "\\p{Alnum}+";
-	public static final String					getAlphabetChars		= "\\p{Alpha}+";
-	public static final String					getNumberChars			= "\\p{Digit}+";
-	public static final String					getUpperCaseChars		= "\\p{Lower}+";
-	public static final String					getLowerCaseChars		= "\\p{Upper}+";
+	public static final ItemStack getSkullFor(Player player) {
+		SkullMeta skullMeta = (SkullMeta) Bukkit.getItemFactory().getItemMeta(Material.SKULL_ITEM);// island home
+		ItemStack item = new ItemStack(Material.SKULL_ITEM, 1, (short) 3);
+		skullMeta.setOwner(player.getName());
+		item.setItemMeta(skullMeta);
+		return item;
+	}
+	
+	public static boolean				enabled							= true;
+	public static boolean				isLoaded						= false;
+	public static final String			getPunctuationChars				= "\\p{Punct}+";
+	public static final String			getWhiteSpaceChars				= "\\s+"/*"\\p{Space}+"*/;
+	public static final String			getAlphaNumericChars			= "\\p{Alnum}+";
+	public static final String			getAlphabetChars				= "\\p{Alpha}+";
+	public static final String			getNumberChars					= "\\p{Digit}+";
+	public static final String			getUpperCaseChars				= "\\p{Lower}+";
+	public static final String			getLowerCaseChars				= "\\p{Upper}+";
+	
+	public static final String			vaultFileName					= "Vault-1.5.6_MC_1.8.1.jar";														//"Vault-1.5.3.jar";//"Vault-1.5.2.jar";
 	
 	/** The variable used to store messages that are meant to be displayed only
 	 * once.
 	 * 
 	 * @see <a
-	 *      href="http://enteisislandsurvival.no-ip.org/javadoc/index.html">Main.sendOneTimeMessage()</a>
+	 *      href=
+	 *      "http://enteisislandsurvival.no-ip.org/javadoc/index.html">Main.sendOneTimeMessage()</a>
 	 * @see <a
 	 *      href="http://enteisislandsurvival.no-ip.org/javadoc/index.html">Java
 	 *      Documentation for EnteisCommands</a> */
-	private static ArrayList<String>			oneTimeMessageList		= new ArrayList<>();
+	private static ArrayList<String>	oneTimeMessageList				= new ArrayList<>();
 	
 	// TODO To be loaded from config.yml
-	public static boolean						backupOnStartup			= false;
-	public static boolean						showDebugMsgs			= false;
-	public static String						noPerm					= "";
+	public static boolean				backupOnStartup					= false;
 	
-	public static boolean						handleEconomy			= false;
-	public static String						moneyTerm				= "money";
-	public static boolean						handleChat				= false;
-	public static boolean						handlePermissions		= false;
+	public static boolean				enableDownloadUpdates			= false;
 	
-	public static String						playerPromotedMessage	= "&aPlayer &f\"PLAYERNAME\"&r&a was just promoted to the &3GROUPNAME&r&a rank!";
-	public static boolean						displayNicknameBrackets	= true;
+	public static boolean				showDebugMsgs					= false;
+	public static String				noPerm							= "";
 	
-	public static Location						spawnLocation			= null;
+	public static boolean				handleEconomy					= false;
+	public static String				moneyTerm						= "money";
+	public static String				creditTerm						= "credits";
+	public static String				broadcastPrefix					= "&f[&4Broadcast&f]";
+	public static boolean				handleChat						= false;
+	public static boolean				handlePermissions				= false;
 	
-	public static String						configVersion			= "";
+	public static String				playerPromotedMessage			= "&aPlayer &f\"PLAYERNAME\"&r&a was just promoted to the &3GROUPNAME&r&a rank!";
+	public static boolean				displayNicknameBrackets			= true;
+	
+	public static boolean				displayOperatorJoinQuitMessages	= true;
+	public static boolean				teleportToSpawnOnVoid			= true;
+	private static volatile Location	spawnLocation					= null;
+	
+	public static final String getWorldStrFromSpawnLocationInConfig() {
+		ConfigurationSection root = Main.config.getConfigurationSection("spawnLocation");
+		if(root != null) {
+			return root.getString("world");
+		}
+		return null;
+	}
+	
+	public static final World getWorldFromConfigStr() {
+		String str = getWorldStrFromSpawnLocationInConfig();
+		if(str != null) {
+			if(Main.isStringUUID(str)) {
+				return Main.server.getWorld(UUID.fromString(str));
+			}
+			return Main.server.getWorld(str);
+		}
+		return null;
+	}
+	
+	public static String						configVersion	= "";
 	
 	//==========================
 	
-	public static final ArrayList<JavaPlugin>	pluginsUsingMe			= new ArrayList<>();
+	public static final ArrayList<JavaPlugin>	pluginsUsingMe	= new ArrayList<>();
 	
 	//=====================
+	
+	public static final void savePluginData() {
+		for(SavablePlayerData savable : SavablePlayerData.instances) {
+			if(!(savable instanceof Group)) {
+				if(savable.saveAndLoadWithSuperCmds) {
+					savable.saveToFile();
+				}
+			}
+		}
+		Group.saveToStaticFile();
+		//Warps.getInstance().saveToFile();
+		ItemLibrary.saveAllLibrariesToFile();//XXX To remove or not to remove; that is the question...
+		for(SavablePluginData savable : SavablePluginData.getAllInstances()) {
+			if(savable.saveAndLoadWithSuperCmds) {
+				savable.saveToFile();
+			}
+		}
+		YamlMgmtClass.saveYamls();
+	}
 	
 	@Override
 	public void onDisable() {
 		Main.uuidMasterList.onDisable();
-		for(SavablePlayerData savable : SavablePlayerData.instances) {
-			if(!(savable instanceof Group)) {
-				savable.saveToFile();
-			}
-		}
-		Group.saveToStaticFile();
+		Main.isLoaded = false;
 		//Group.disposeAll();
-		//Warps.getInstance().saveToFile();
-		for(SavablePluginData savable : SavablePluginData.getAllInstances()) {
-			savable.saveToFile();
-		}
-		YamlMgmtClass.saveYamls();
+		savePluginData();
 		Main.sendConsoleMessage(Main.pluginName + "&eVersion " + Main.pdffile.getVersion() + " is now disabled!");
 	}
 	
 	@Override
 	public void onLoad() {
+		Main.isLoaded = false;
 		Main.instance = this;
 		Main.pdffile = this.getDescription();
 		Main.server = Bukkit.getServer();
@@ -326,18 +493,74 @@ public class Main extends JavaPlugin implements Listener {
 		}
 	}
 	
-	private static boolean	isVaultAlreadyInstalled	= false;
+	public static final boolean isVaultInstalled() {
+		return getVault() != null;
+	}
+	
+	public static final Plugin getVault() {
+		return Bukkit.getServer().getPluginManager().getPlugin("Vault");
+	}
+	
+	public static final void setSpawnLocation(Location loc, boolean allowNull) {
+		if(!allowNull) {
+			Main.setSpawnLocation(loc);
+			return;
+		}
+		Main.spawnLocation = loc;
+	}
+	
+	public static final void setSpawnLocation(Location loc) {
+		if(loc == null) {
+			loc = getServerDefaultSpawnLocation();
+		}
+		Main.spawnLocation = loc;
+	}
+	
+	public static final Location getSpawnLocation() {
+		if(Main.spawnLocation == null) {
+			World world = getWorldFromConfigStr();
+			if(world != null) {
+				Main.spawnLocation = SavablePlayerData.getLocationFromConfig("spawnLocation", Main.config);
+				Main.sendConsoleMessage(Main.pluginName + "&aSuccessfully loaded spawn location from config after the missing world loaded/was detected!");
+			}
+		}
+		return Main.spawnLocation;
+	}
+	
+	public static final Location getServerDefaultSpawnLocation() {
+		return Main.server.getWorlds().get(0).getSpawnLocation();
+	}
+	
+	public static final Location getSpawnOrDefaultSpawnLocationIfNull() {
+		Location loc = Main.getSpawnLocation();
+		if(loc == null) {
+			loc = Main.getServerDefaultSpawnLocation();
+		}
+		return loc;
+	}
+	
+	@EventHandler(priority = EventPriority.HIGHEST)
+	public static final void onWorldLoadEvent(WorldLoadEvent event) {
+		World loaded = event.getWorld();
+		World check = getWorldFromConfigStr();
+		if(loaded != null && check != null) {
+			if(loaded.getUID().toString().equals(check.getUID().toString())) {
+				Main.spawnLocation = SavablePlayerData.getLocationFromConfig("spawnLocation", Main.config);
+				Main.sendConsoleMessage(Main.pluginName + "&aSuccessfully loaded spawn location from config after the missing world loaded!");
+			}
+		}
+	}
 	
 	@Override
 	public void onEnable() {
-		Main.isVaultAlreadyInstalled = Main.server.getPluginManager().getPlugin("Vault") != null;
-		if(!Main.isVaultAlreadyInstalled) {
-			File vault = YamlMgmtClass.getResourceFromStreamAsFile(Main.dataFolder, "Vault-1.5.0.jar", false);
+		Main.isLoaded = false;
+		if(!Main.isVaultInstalled()) {
+			File vault = YamlMgmtClass.getResourceFromStreamAsFile(Main.dataFolder, Main.vaultFileName, false);
 			try {
 				Plugin v = Main.server.getPluginManager().loadPlugin(vault);
 				if(v != null) {
 					Main.server.getPluginManager().enablePlugin(v);
-					Main.sendConsoleMessage(Main.pluginName + "&6Vault could not be found, so " + Main.pluginName + "&eloaded it manually. The server may need to be restarted for changes to take effect.");
+					Main.sendConsoleMessage(Main.pluginName + "&eVault could not be found, so " + Main.pluginName + "&eloaded it manually.");
 				} else {
 					Main.sendConsoleMessage(Main.pluginName + "&eVault could not be found and Bukkit was unable to load it manually. A server restart should fix the issue.");
 				}
@@ -351,20 +574,33 @@ public class Main extends JavaPlugin implements Listener {
 		// TODO Loading Files, plugins, etc.
 		YamlMgmtClass.LoadConfig();
 		if(Main.spawnLocation == null) {
-			Main.spawnLocation = Main.server.getWorlds().get(0).getSpawnLocation();
+			if(Main.getWorldFromConfigStr() == null) {
+				Main.spawnLocation = Main.server.getWorlds().get(0).getSpawnLocation();
+			} else {
+				Main.getSpawnLocation();
+			}
 		}
 		Main.uuidMasterList.onEnable();
 		// TODO End of Loading Files, plugins, etc.
 		if(Main.enabled) {
-			if(Main.setupPermissions()) {
+			CmdThread.getInstance();
+			/*if(Main.setupPermissions()) {
 				Main.sendConsoleMessage(Main.pluginName + "&2Vault Permissions API Successful!");
 			} else {
 				Main.sendConsoleMessage(Main.pluginName + "&cVault Permissions API was not successful.");
-			}
+			}*/
 			Main.registerEvents();
-			for(SavablePluginData data : SavablePluginData.getAllInstances()) {//Warps.getInstance().loadFromFile();
-				data.loadFromFile();
+			for(SavablePluginData data : SavablePluginData.getAllInstances()) {
+				try {
+					if(data != null && data.saveAndLoadWithSuperCmds) {
+						data.loadFromFile();
+					}
+				} catch(Throwable e) {
+					Main.sendConsoleMessage(Main.pluginName + "&eAn error occurred while loading \"&f" + (data != null ? data.getName() : "&4{!Unknown SavablePluginData Type!}") + "&r&e\" from file:&z&c" + Main.throwableToStr(e));
+				}
 			}
+			ItemLibrary.loadAllLibrariesFromFile();
+			TicketData.getInstance().loadFromFile();
 			try {
 				Group.reloadFromFile();
 			} catch(Throwable e) {
@@ -373,9 +609,9 @@ public class Main extends JavaPlugin implements Listener {
 			Main.sendConsoleMessage(Main.pluginName + "&aVersion " + Main.pdffile.getVersion() + " is now enabled!");
 			//Back up the config files:
 			if(Main.backupOnStartup) {
-				Main.scheduler.scheduleSyncDelayedTask(Main.getInstance(), new Runnable() {
+				new Thread(new Runnable() {
 					@Override
-					public void run() {
+					public final void run() {
 						File[] playerFolders = SavablePlayerData.getStaticSaveFolders();
 						try {
 							final String date = CodeUtils.getSystemTime(false, true, true);//Date only, file system safe
@@ -407,7 +643,7 @@ public class Main extends JavaPlugin implements Listener {
 							}
 						}
 					}
-				});
+				}).start();
 			}
 			try {
 				YamlMgmtClass.getResourceFromStreamAsFile(Main.dataFolder, "permissions.txt", true);
@@ -418,15 +654,16 @@ public class Main extends JavaPlugin implements Listener {
 					Main.sendConsoleMessage(Main.pluginName + "&eDid you /reload the server instead of &3/save-all&e and &3/stop {message...}&e?&z&eIf so, consider shutting down the server and starting it up properly.");
 				}
 			}
-			Main.scheduler.scheduleSyncRepeatingTask(Main.getInstance(), Runnables.updateVanishStatesTask, 0, 20 * 30);
+			Runnables.updatePlayerStatesTask.runTaskTimer(Main.getInstance(), 20 * 5, 20 * 30);//Main.scheduler.scheduleSyncRepeatingTask(Main.getInstance(), Runnables.updatePlayerStatesTask, 0, 20 * 30);
+			Main.isLoaded = true;
 		} else {
 			Main.uuidMasterList.onDisable();
 			this.onDisable();
 		}
 	}
 	
-	@Deprecated
-	public static Permission	perm;
+	/*@Deprecated
+	public static Permission perm;
 	
 	@Deprecated
 	public static boolean setupPermissions() {
@@ -434,24 +671,109 @@ public class Main extends JavaPlugin implements Listener {
 			return false;
 		}
 		RegisteredServiceProvider<Permission> rsp = Main.server.getServicesManager().getRegistration(Permission.class);
-		if(rsp.getProvider() != null) {
-			Main.perm = rsp.getProvider();
+		if(rsp != null) {
+			if(rsp.getProvider() != null) {
+				Main.perm = rsp.getProvider();
+			}
 		}
 		return Main.perm != null;
+	}*/
+	
+	@EventHandler(priority = EventPriority.LOWEST)
+	public static final void onServerPingPlayerListEvent(ServerListPingEvent event) {
+		Main.sendConsoleMessage("Received server ping from: " + event.getAddress().toString());
+	}
+	
+	public static final String getItemStackDisplayName(ItemStack item) {
+		return item == null ? null : (item.hasItemMeta() && item.getItemMeta().hasDisplayName() ? Main.formatColorCodes(item.getItemMeta().getDisplayName()) : capitalizeFirstLetterOfEachWordIn(item.getType().name()));
+	}
+	
+	@SuppressWarnings("deprecation")
+	public static final ItemStack getItemStackFromBlock(Block block) {
+		if(block == null) {
+			return null;
+		}
+		return new ItemStack(block.getType(), 1, (short) 0, Byte.valueOf(block.getData()));
+	}
+	
+	public static final String getItemStackName(Block block) {
+		return getItemStackName(getItemStackFromBlock(block));
+	}
+	
+	public static final String getItemStackName(ItemStack item) {
+		return item == null ? null : (item.hasItemMeta() && item.getItemMeta().hasDisplayName() ? Main.formatColorCodes(item.getItemMeta().getDisplayName()) : Main.getItemStackUserFriendlyName(item));
+	}
+	
+	public static final String getItemStackUserFriendlyName(ItemStack item) {
+		ItemInfo info = item == null ? null : Items.itemByStack(item);
+		return info == null ? getItemStackDisplayName(item) : info.getName();
+	}
+	
+	private static final int	SECOND	= 1000;
+	private static final int	MINUTE	= 60 * Main.SECOND;
+	private static final int	HOUR	= 60 * Main.MINUTE;
+	private static final int	DAY		= 24 * Main.HOUR;
+	private static final int	YEAR	= 365 * Main.DAY;
+	
+	public static final String getLengthOfTime(long milliseconds) {
+		StringBuffer text = new StringBuffer("");
+		boolean yearsDaysOrHours = false;
+		if(milliseconds >= Main.YEAR) {//dang. That is a long time. Haha lol I made an accidental funny.
+			long years = milliseconds / Main.YEAR;
+			text.append(years).append(years == 1L ? " year " : " years ");//I don't think that a Java long value can hold more than one year tbh... oh well. To think I wanted to add decades and centuries too XD
+			milliseconds %= Main.YEAR;
+			yearsDaysOrHours = true;
+		}
+		if(milliseconds >= Main.DAY) {
+			long days = milliseconds / Main.DAY;
+			text.append(days).append(days == 1 ? " day " : " days ");
+			milliseconds %= Main.DAY;
+			yearsDaysOrHours = true;
+		}
+		if(milliseconds >= Main.HOUR) {
+			long hours = milliseconds / Main.HOUR;
+			text.append(hours).append(hours == 1 ? " hours " : " hours ");
+			milliseconds %= Main.HOUR;
+			yearsDaysOrHours = true;
+		}
+		boolean minutes = false;
+		boolean plural = true;
+		if(milliseconds >= Main.MINUTE) {
+			if(yearsDaysOrHours) {
+				text.append("and ");
+			} else {
+				text.append("00:");
+			}
+			long mins = milliseconds / Main.MINUTE;
+			text.append((mins >= 10 ? "" : "0") + mins).append(":");
+			milliseconds %= Main.MINUTE;
+			minutes = true;
+			plural = mins != 1;
+		} else {
+			if(yearsDaysOrHours) {
+				text.append("and 00:");
+			} else {
+				text.append("00:00:");
+			}
+		}
+		if(milliseconds >= Main.SECOND) {
+			long sec = milliseconds / Main.SECOND;
+			text.append((sec >= 10 ? "" : "0") + sec);
+			milliseconds %= Main.SECOND;
+			plural = !minutes ? sec != 1 : plural;
+		} else {
+			text.append("00");
+		}
+		text.append(plural ? (minutes ? " minutes" : " seconds") : (minutes ? " minute" : " second"));
+		return text.toString();
+	}
+	
+	public static final String getTimeAndDate(long time) {
+		return new SimpleDateFormat("MMM dd, yyyy @ HH:mm:ss").format(new Date(time));
 	}
 	
 	public static String getSystemTime(boolean getTimeOnly) {
-		String timeAndDate = "";
-		if(getTimeOnly == false) {
-			DateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
-			Date date = new Date();
-			timeAndDate = dateFormat.format(date);
-		} else {
-			DateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
-			Date date = new Date();
-			timeAndDate = dateFormat.format(date);
-		}
-		return timeAndDate;
+		return new SimpleDateFormat(getTimeOnly ? "HH:mm:ss" : "MM/dd/yyyy HH:mm:ss").format(new Date());
 	}
 	
 	public final static Chunk getChunkAtWorldCoords(World world, int x, int z) {
@@ -468,7 +790,8 @@ public class Main extends JavaPlugin implements Listener {
 		return chunk;
 	}
 	
-	/** Checks str1 against str2(and vice versa) to see if they either equal(case
+	/** Checks str1 against str2(and vice versa) to see if they either
+	 * equal(case
 	 * ignored), if str1 starts with str2 and str1 is less than 6 characters(and
 	 * vice versa), and removes all non-alpha-numeric characters and performs
 	 * the checks again.
@@ -611,6 +934,33 @@ public class Main extends JavaPlugin implements Listener {
 		return args;
 	}
 	
+	public static final String getElementsFromStringArrayAtIndexesAsString(String[] array, int startIndex, int endIndex) {
+		return Main.getElementsFromStringArrayAtIndexesAsString(array, startIndex, endIndex, ' ');
+	}
+	
+	public static final String getElementsFromStringArrayAtIndexesAsString(String[] array, int startIndex, int endIndex, char seperatorChar) {
+		if(array == null || array.length == 0) {
+			return null;
+		}
+		if(startIndex < 0 || startIndex > array.length || endIndex < 0 || endIndex > array.length) {
+			return null;
+		}
+		String rtrn = "";
+		if(startIndex > endIndex) {
+			for(int i = startIndex; i < endIndex; i--) {
+				rtrn += seperatorChar + array[i];
+			}
+		} else {
+			for(int i = startIndex; i < endIndex; i++) {
+				rtrn += seperatorChar + array[i];
+			}
+		}
+		if(rtrn.startsWith(seperatorChar + "")) {
+			rtrn = rtrn.substring(1);
+		}
+		return rtrn.trim();
+	}
+	
 	public static final String getElementsFromStringArrayAtIndexAsString(String[] array, int index) {
 		return Main.getElementsFromStringArrayAtIndexAsString(array, index, ' ');
 	}
@@ -624,6 +974,27 @@ public class Main extends JavaPlugin implements Listener {
 			mkArgs += array[i] + seperatorChar;
 		}
 		return mkArgs.trim();
+	}
+	
+	public static final boolean doesArrayContainAnyNullObjects(Object[] array) {
+		for(int i = 0; i < array.length; i++) {
+			if(array[i] == null) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	public static final int getNextFreeIndexInArray(Object[] array) {
+		if(array == null || !Main.doesArrayContainAnyNullObjects(array)) {
+			return -1;
+		}
+		for(int i = 0; i < array.length; i++) {
+			if(array[i] == null) {
+				return i;
+			}
+		}
+		return -1;
 	}
 	
 	public static String sendConsoleMessage(String message) {
@@ -658,6 +1029,71 @@ public class Main extends JavaPlugin implements Listener {
 		return message.trim();
 	}
 	
+	public static final Group getAdministratorGroup() {
+		Group admin = Group.getGroupByName("admin");
+		admin = admin == null ? Group.getGroupByName("admins") : admin;
+		admin = admin == null ? Group.getGroupByName("administrator") : admin;
+		admin = admin == null ? Group.getGroupByName("administrators") : admin;
+		return admin;
+	}
+	
+	public static final boolean isPlayerAStaffMember(Player player) {
+		return player != null ? player.isOp() || PlayerPermissions.getPlayerPermissions(player).isAMemberOfGroup(getAdministratorGroup()) : false;
+	}
+	
+	public static final String sendMessageToOnlineStaffWith(CommandSender target, String message) {
+		boolean sentToTargetAlready = target == null;
+		if(!sentToTargetAlready && !(target instanceof Player)) {
+			sentToTargetAlready = true;
+			sendMessage(target, message);
+		}
+		for(Player player : server.getOnlinePlayers()) {
+			if(player.isOp()) {
+				if(!sentToTargetAlready) {
+					if(SavablePlayerData.playerEquals(player, (Player) target)) {
+						sentToTargetAlready = true;
+					}
+				}
+				sendMessage(player, message);
+			}
+		}
+		Group admin = getAdministratorGroup();
+		if(admin != null) {
+			for(Player player : server.getOnlinePlayers()) {
+				if(!player.isOp()) {//we just sent the message to all opped players, no need to send it twice
+					if(PlayerPermissions.getPlayerPermissions(player).isAMemberOfGroup(admin)) {
+						if(!sentToTargetAlready) {
+							if(SavablePlayerData.playerEquals(player, (Player) target)) {
+								sentToTargetAlready = true;
+							}
+						}
+						sendMessage(player, message);
+					}
+				}
+			}
+		}
+		return formatColorCodes(message).trim();
+	}
+	
+	public static final String sendMessageToOnlineStaff(String message) {
+		for(Player player : server.getOnlinePlayers()) {
+			if(player.isOp()) {
+				sendMessage(player, message);
+			}
+		}
+		Group admin = getAdministratorGroup();
+		if(admin != null) {
+			for(Player player : server.getOnlinePlayers()) {
+				if(!player.isOp()) {//we just sent the message to all opped players, no need to send it twice
+					if(PlayerPermissions.getPlayerPermissions(player).isAMemberOfGroup(admin)) {
+						sendMessage(player, message);
+					}
+				}
+			}
+		}
+		return formatColorCodes(message).trim();
+	}
+	
 	public static String fixPluralWord(int number, String word) {
 		// TODO Auto-generated method stub
 		String newWord = "";
@@ -690,7 +1126,7 @@ public class Main extends JavaPlugin implements Listener {
 					newWord = beginningOfWord + endOfWord;
 					return newWord;
 				}
-				return word + "s";
+				return word + (word.endsWith("s") ? "" : "s");
 			}
 			return word;
 		} else if(word.equalsIgnoreCase("are")) {
@@ -727,7 +1163,7 @@ public class Main extends JavaPlugin implements Listener {
 		return str;
 	}
 	
-	public static String GrammarEnforcement(String msg, Player chatter, String dataFolderName) {
+	public static String GrammarEnforcement(String msg, String dataFolderName) {
 		try {
 			msg = Main.capitalizeFirstLetter(msg);
 			msg = Main.replaceWord(msg, "(\\w+)(\\s+\\1)+", "$1", false, dataFolderName);
@@ -755,6 +1191,7 @@ public class Main extends JavaPlugin implements Listener {
 			msg = Main.replaceWord(msg, "Budder", "Gold", true, dataFolderName);//XD
 			msg = Main.replaceWord(msg, "budder", "gold", false, dataFolderName);//XD
 			msg = Main.replaceWord(msg, "Buder", "Gold", true, dataFolderName);//XD
+			msg = Main.replaceWord(msg, "bud.der", "gold", false, dataFolderName);//XD
 			msg = Main.replaceWord(msg, "buder", "gold", false, dataFolderName);//XD
 			msg = Main.replaceWord(msg, "Brb", "Be right back", true, dataFolderName);
 			msg = Main.replaceWord(msg, "brb", "be right back", false, dataFolderName);
@@ -858,9 +1295,21 @@ public class Main extends JavaPlugin implements Listener {
 			msg = replaceWord(msg, "", "", false, dataFolderName);*/
 			msg = msg.replaceAll("(?i)\\bbud der\\b", "gold");
 		} catch(ArrayIndexOutOfBoundsException e) {
-			FileMgmt.LogCrash(e, "GrammarEnforcement()", "A bad regex was used in the function \"replaceWord(String msg(\"" + msg + "\"), Player chatter(\"" + chatter.getName() + "\"), String dataFolderName(\"" + dataFolderName + "\"))\"!", true, dataFolderName);
+			FileMgmt.LogCrash(e, "GrammarEnforcement()", "A bad regex was used in the function \"replaceWord(String msg(\"" + msg + "\"), String dataFolderName(\"" + dataFolderName + "\"))\"!", true, dataFolderName);
 		}
 		return msg.trim();
+	}
+	
+	public static final String capitalizeFirstLetterOfEachWordIn(String msg) {
+		msg = msg.replace("_", " ");
+		String rtrn = "";
+		int i = 0;
+		String[] split = msg.split(getWhiteSpaceChars);
+		for(String s : split) {
+			rtrn += capitalizeFirstLetter(s.toLowerCase()) + (i + 1 == split.length ? "" : " ");
+			i++;
+		}
+		return rtrn;
 	}
 	
 	/** @param msg String
@@ -875,8 +1324,10 @@ public class Main extends JavaPlugin implements Listener {
 	}
 	
 	public static int getRandomIntValBetween(int Low, int High) {
-		Random r = new Random();
-		int R = r.nextInt(High - Low) + Low;
+		SecureRandom r = new SecureRandom();
+		int L = Math.min(Low, High);
+		int H = Math.max(Low, High);
+		int R = r.nextInt(H - L) + L;
 		return R;
 	}
 	
@@ -888,6 +1339,9 @@ public class Main extends JavaPlugin implements Listener {
 	}
 	
 	public static boolean LocationEquals(Location loc1, Location loc2) {
+		if(loc1 == null || loc2 == null) {
+			return false;
+		}
 		boolean x = (loc1.getBlockX() == loc2.getBlockX());
 		boolean y = (loc1.getBlockY() == loc2.getBlockY());
 		boolean z = (loc1.getBlockZ() == loc2.getBlockZ());
@@ -943,6 +1397,226 @@ public class Main extends JavaPlugin implements Listener {
 		return false;
 	}
 	
+	/** @param event The InventoryClickEvent to use
+	 * @return What inventory was clicked based on the given information
+	 * @see FunctionClass#whatInventoryWasClicked(InventoryView, int, int) */
+	public static String whatInventoryWasClicked(InventoryClickEvent event) {
+		return Main.whatInventoryWasClicked(event.getView(), event.getSlot(), event.getRawSlot());
+	}
+	
+	public static String topOrBottom(InventoryClickEvent event) {
+		return Main.topOrBottom(event.getView(), event.getSlot(), event.getRawSlot());
+	}
+	
+	/** @param slot unused */
+	public static String topOrBottom(InventoryView view, int slot, int rawSlot) {
+		Inventory topInv = view.getTopInventory();
+		if(rawSlot >= topInv.getSize()) {
+			return "BOTTOM";
+		}
+		return "TOP";
+	}
+	
+	/** @param view The InventoryView
+	 * @param slot The slot
+	 * @param rawSlot The rawSlot
+	 * @return What inventory was clicked based on the given information */
+	public static String whatInventoryWasClicked(InventoryView view, int slot, int rawSlot) {
+		String rtrn = "UNDETERMINED_" + view.getTopInventory().getType().name() + "_SIZE_" + view.getTopInventory().getSize();
+		Inventory topInv = view.getTopInventory();
+		//Inventory bottomInv = view.getBottomInventory();
+		if(topInv.getType().equals(InventoryType.ANVIL)) {
+			if(rawSlot >= 0 && rawSlot <= 2) {//Top anvil slots
+				rtrn = "ANVIL_" + rawSlot;
+			} else if(rawSlot >= 3 && rawSlot <= 29) {//Inventory
+				rtrn = "BOTTOM_" + slot;
+			} else if(rawSlot >= 30 && rawSlot <= 38) {//Hotbar
+				rtrn = "HOTBAR_" + slot;
+			}
+		}
+		if(topInv.getType().equals(InventoryType.BEACON)) {
+			if(rawSlot == 0) {//Beacon slot
+				rtrn = "BEACON_" + rawSlot;
+			} else if(rawSlot >= 1 && rawSlot <= 27) {//Inventory
+				rtrn = "BOTTOM_" + slot;
+			} else if(rawSlot >= 28 && rawSlot <= 36) {//Hotbar
+				rtrn = "HOTBAR_" + slot;
+			}
+		}
+		if(topInv.getType().equals(InventoryType.BREWING)) {
+			if(rawSlot >= 0 && rawSlot <= 3) {//Top brewing slots
+				rtrn = "BREWING_" + rawSlot;
+			} else if(rawSlot >= 4 && rawSlot <= 30) {//Inventory
+				rtrn = "BOTTOM_" + slot;
+			} else if(rawSlot >= 31 && rawSlot <= 39) {//Hotbar
+				rtrn = "HOTBAR_" + slot;
+			}
+		}
+		if(topInv.getType().equals(InventoryType.CHEST)) {
+			if(topInv.getSize() == 2) {//Horse inventory(Why didn't they just make another type?)
+				if(rawSlot >= 0 && rawSlot <= 1) {//Top horse slots
+					rtrn = "HORSE_" + rawSlot;
+				} else if(rawSlot >= 2 && rawSlot <= 28) {//Inventory
+					rtrn = "BOTTOM_" + slot;
+				} else if(rawSlot >= 29 && rawSlot <= 37) {//Hotbar
+					rtrn = "HOTBAR_" + slot;
+				}
+			} else if(topInv.getSize() == 9) {
+				if(rawSlot >= 0 && rawSlot <= 8) {//Top chest slots
+					rtrn = "CHEST_" + rawSlot;
+				} else if(rawSlot >= 9 && rawSlot <= 35) {//Inventory
+					rtrn = "BOTTOM_" + slot;
+				} else if(rawSlot >= 36 && rawSlot <= 44) {//Hotbar
+					rtrn = "HOTBAR_" + slot;
+				}
+			} else if(topInv.getSize() == 18) {
+				if(rawSlot >= 0 && rawSlot <= 17) {//Top chest slots
+					rtrn = "CHEST_" + rawSlot;
+				} else if(rawSlot >= 18 && rawSlot <= 44) {//Inventory
+					rtrn = "BOTTOM_" + slot;
+				} else if(rawSlot >= 45 && rawSlot <= 53) {//Hotbar
+					rtrn = "HOTBAR_" + slot;
+				}
+			} else if(topInv.getSize() == 27) {
+				if(rawSlot >= 0 && rawSlot <= 26) {//Top chest slots
+					rtrn = "CHEST_" + rawSlot;
+				} else if(rawSlot >= 27 && rawSlot <= 53) {//Inventory
+					rtrn = "BOTTOM_" + slot;
+				} else if(rawSlot >= 54 && rawSlot <= 62) {//Hotbar
+					rtrn = "HOTBAR_" + slot;
+				}
+			} else if(topInv.getSize() == 36) {
+				if(rawSlot >= 0 && rawSlot <= 35) {//Top chest slots
+					rtrn = "CHEST_" + rawSlot;
+				} else if(rawSlot >= 36 && rawSlot <= 62) {//Inventory
+					rtrn = "BOTTOM_" + slot;
+				} else if(rawSlot >= 63 && rawSlot <= 71) {//Hotbar
+					rtrn = "HOTBAR_" + slot;
+				}
+			} else if(topInv.getSize() == 45) {
+				if(rawSlot >= 0 && rawSlot <= 44) {//Top chest slots
+					rtrn = "CHEST_" + rawSlot;
+				} else if(rawSlot >= 45 && rawSlot <= 71) {//Inventory
+					rtrn = "BOTTOM_" + slot;
+				} else if(rawSlot >= 72 && rawSlot <= 80) {//Hotbar
+					rtrn = "HOTBAR_" + slot;
+				}
+			} else if(topInv.getSize() == 54) {
+				if(rawSlot >= 0 && rawSlot <= 53) {//Top chest slots
+					rtrn = "CHEST_" + rawSlot;
+				} else if(rawSlot >= 54 && rawSlot <= 80) {//Inventory
+					rtrn = "BOTTOM_" + slot;
+				} else if(rawSlot >= 81 && rawSlot <= 89) {//Hotbar
+					rtrn = "HOTBAR_" + slot;
+				}
+			}
+		}
+		if(topInv.getType().equals(InventoryType.CRAFTING)) {
+			if(rawSlot >= 0 && rawSlot <= 4) {//Top crafting slots
+				rtrn = "CRAFTING_" + rawSlot;
+			} else if(rawSlot >= 9 && rawSlot <= 35) {//Inventory
+				rtrn = "BOTTOM_" + slot;
+			} else if(rawSlot >= 36 && rawSlot <= 44) {//Hotbar
+				rtrn = "HOTBAR_" + slot;
+			} else if(rawSlot >= 5 && rawSlot <= 8) {//Armour
+				rtrn = "ARMOUR_" + (rawSlot == 5 ? "HELMET" : (rawSlot == 6 ? "CHESTPLATE" : (rawSlot == 7 ? "LEGGINGS" : (rawSlot == 8 ? "BOOTS" : "UNKNOWN"))));
+			}
+		}
+		if(topInv.getType().equals(InventoryType.CREATIVE)) {//Not needed, covered by InventoryType.PLAYER
+			/*
+			 * if(rawSlot >= && rawSlot <= ) {//Top creative slots
+			 * rtrn = "_" + rawSlot;
+			 * } else if(rawSlot >= && rawSlot <= ) {//Inventory
+			 * rtrn = "BOTTOM_" + slot;
+			 * } else if(rawSlot >= && rawSlot <= ) {//Hotbar
+			 * rtrn = "HOTBAR_" + slot;
+			 * }
+			 */
+		}
+		if(topInv.getType().equals(InventoryType.DISPENSER)) {
+			if(rawSlot >= 0 && rawSlot <= 8) {//Top dispenser slots
+				rtrn = "DISPENSER_" + rawSlot;
+			} else if(rawSlot >= 9 && rawSlot <= 35) {//Inventory
+				rtrn = "BOTTOM_" + slot;
+			} else if(rawSlot >= 36 && rawSlot <= 44) {//Hotbar
+				rtrn = "HOTBAR_" + slot;
+			}
+		}
+		if(topInv.getType().equals(InventoryType.DROPPER)) {
+			if(rawSlot >= 0 && rawSlot <= 8) {//Top dropper slots
+				rtrn = "DROPPER_" + rawSlot;
+			} else if(rawSlot >= 9 && rawSlot <= 35) {//Inventory
+				rtrn = "BOTTOM_" + slot;
+			} else if(rawSlot >= 36 && rawSlot <= 44) {//Hotbar
+				rtrn = "HOTBAR_" + slot;
+			}
+		}
+		if(topInv.getType().equals(InventoryType.ENCHANTING)) {
+			if(rawSlot == 0) {//Enchanting slot
+				rtrn = "ENCHANTING_" + rawSlot;
+			} else if(rawSlot >= 1 && rawSlot <= 27) {//Inventory
+				rtrn = "BOTTOM_" + slot;
+			} else if(rawSlot >= 28 && rawSlot <= 36) {//Hotbar
+				rtrn = "HOTBAR_" + slot;
+			}
+		}
+		if(topInv.getType().equals(InventoryType.ENDER_CHEST)) {
+			if(rawSlot >= 0 && rawSlot <= 26) {//Top ender chest slots
+				rtrn = "ENDERCHEST_" + rawSlot;
+			} else if(rawSlot >= 27 && rawSlot <= 53) {//Inventory
+				rtrn = "BOTTOM_" + slot;
+			} else if(rawSlot >= 54 && rawSlot <= 62) {//Hotbar
+				rtrn = "HOTBAR_" + slot;
+			}
+		}
+		if(topInv.getType().equals(InventoryType.FURNACE)) {
+			if(rawSlot >= 0 && rawSlot <= 2) {//Top furnace slots
+				rtrn = "FURNACE_" + rawSlot;
+			} else if(rawSlot >= 3 && rawSlot <= 29) {//Inventory
+				rtrn = "BOTTOM_" + slot;
+			} else if(rawSlot >= 30 && rawSlot <= 38) {//Hotbar
+				rtrn = "HOTBAR_" + slot;
+			}
+		}
+		if(topInv.getType().equals(InventoryType.HOPPER)) {
+			if(rawSlot >= 0 && rawSlot <= 4) {//Top hopper slots
+				rtrn = "HOPPER_" + rawSlot;
+			} else if(rawSlot >= 5 && rawSlot <= 31) {//Inventory
+				rtrn = "BOTTOM_" + slot;
+			} else if(rawSlot >= 32 && rawSlot <= 40) {//Hotbar
+				rtrn = "HOTBAR_" + slot;
+			}
+		}
+		if(topInv.getType().equals(InventoryType.MERCHANT)) {
+			if(rawSlot >= 0 && rawSlot <= 2) {//Top villager slots
+				rtrn = "MERCHANT_" + rawSlot;
+			} else if(rawSlot >= 3 && rawSlot <= 29) {//Inventory
+				rtrn = "BOTTOM_" + slot;
+			} else if(rawSlot >= 30 && rawSlot <= 38) {//Hotbar
+				rtrn = "HOTBAR_" + slot;
+			}
+		}
+		if(topInv.getType().equals(InventoryType.PLAYER)) {
+			if(rawSlot >= 0 && rawSlot <= 26) {//Top Player slots
+				rtrn = "PLAYER_" + rawSlot;
+			} else if(rawSlot >= 27 && rawSlot <= 53) {//Inventory
+				rtrn = "PLAYER_" + slot;//BOTTOM_
+			} else if(rawSlot >= 54 && rawSlot <= 62) {//Hotbar
+				rtrn = "PLAYER_" + slot;//HOTBAR_
+			}
+		}
+		if(topInv.getType().equals(InventoryType.WORKBENCH)) {
+			if(rawSlot >= 0 && rawSlot <= 9) {//Top crafting slots
+				rtrn = "WORKBENCH_" + rawSlot;
+			} else if(rawSlot >= 10 && rawSlot <= 36) {//Inventory
+				rtrn = "BOTTOM_" + slot;
+			} else if(rawSlot >= 37 && rawSlot <= 45) {//Hotbar
+				rtrn = "HOTBAR_" + slot;
+			}
+		}
+		return rtrn;
+	}
+	
 	/** Takes the given command string(cmd, which is everything you type) and
 	 * cuts the actual commandLabel(the command you used) out, resulting in only
 	 * the arguments.
@@ -980,18 +1654,6 @@ public class Main extends JavaPlugin implements Listener {
 		return strArgs;
 	}
 	
-	@Override
-	public List<String> onTabComplete(CommandSender sender, Command cmd, String alias, String[] args) {
-		ArrayList<String> rtrn = new ArrayList<>();
-		String command = Main.getCommandFromMsg(cmd.getName());
-		if(command.equalsIgnoreCase("uuid")) {
-			for(String[] curEntry : Main.uuidMasterList.getPlayerUUIDList()) {
-				rtrn.add(curEntry[1]);
-			}
-		}
-		return((rtrn.size() != 0) ? rtrn : null);
-	}
-	
 	public static void sleep(long millis) {
 		try {
 			Thread.sleep(millis);
@@ -1012,10 +1674,105 @@ public class Main extends JavaPlugin implements Listener {
 		return str1.endsWith(str2);
 	}
 	
+	/** @param array The list to read from
+	 * @param c The character to use as a separator
+	 * @return The resulting string */
+	public static final String stringArrayToString(char c, List<String> array) {
+		if(array == null) {
+			return "null";
+		}
+		String rtrn = "";
+		for(String element : array) {
+			rtrn += element + c;
+		}
+		return rtrn.trim();
+	}
+	
+	/** @param array The array/list/strings to read from
+	 * @param c The character to use as a separator
+	 * @return The resulting string */
+	public static final String stringArrayToString(char c, String... array) {
+		if(array == null) {
+			return "null";
+		}
+		String rtrn = "";
+		for(String element : array) {
+			rtrn += element + c;
+		}
+		return rtrn.length() >= 2 ? rtrn.substring(0, rtrn.length() - 1) : rtrn;
+	}
+	
+	/** @param array The String[] array to convert
+	 * @param c The separator character to use
+	 * @return The resulting string */
+	public static final String stringArrayToString(String[] array, char c) {
+		return stringArrayToString(array, c, 0);
+	}
+	
+	/** @param array The String[] array to convert
+	 * @param c The separator character to use
+	 * @param startIndex The index to start at
+	 * @return The resulting string */
+	public static final String stringArrayToString(String[] array, char c, int startIndex) {
+		return stringArrayToString(array, c + "", startIndex);
+	}
+	
+	/** @param array The array/list/strings to read from
+	 * @param c The character to use as a separator
+	 * @param startIndex The index to start at
+	 * @return The resulting string */
+	public static final String stringArrayToString(String[] array, String c, int startIndex) {
+		if(array == null || startIndex >= array.length) {
+			return "null";
+		}
+		String rtrn = "";
+		int i = 0;
+		for(String element : array) {
+			if(i >= startIndex) {
+				rtrn += element + (i + 1 == array.length ? "" : c);
+			}
+			i++;
+		}
+		return rtrn;
+	}
+	
+	/** @param array The String[] array to convert
+	 * @param c The separator character to use
+	 * @param startIndex The index to start at
+	 * @param endIndex The index to stop short at
+	 * @return The resulting string */
+	public static final String stringArrayToString(String[] array, char c, int startIndex, int endIndex) {
+		return stringArrayToString(array, c + "", startIndex, endIndex);
+	}
+	
+	/** @param array The array/list/strings to read from
+	 * @param c The character to use as a separator
+	 * @param startIndex The index to start at
+	 * @param endIndex The index to stop short at
+	 * @return The resulting string. If startIndex is greater than or equal to
+	 *         the array's size, endIndex is greater than the array's size,
+	 *         startIndex is greater than or equal to endIndex, and/or either
+	 *         startIndex or endIndex are negative, "null" is returned. */
+	public static final String stringArrayToString(String[] array, String c, int startIndex, int endIndex) {
+		if(array == null || startIndex >= array.length || endIndex > array.length || startIndex >= endIndex || startIndex < 0 || endIndex < 0) {
+			return "null";
+		}
+		String rtrn = "";
+		int i = 0;
+		for(String element : array) {
+			if(i >= startIndex && i < endIndex) {
+				rtrn += element + (i + 1 == endIndex ? "" : c);
+			}
+			i++;
+		}
+		return rtrn;
+	}
+	
 	protected static boolean	shutdownInProgress		= false;
 	protected static boolean	shutdownTaskIsCancelled	= false;
+	private static final String	downloadURL				= "http://redsandbox.ddns.net/Files/Minecraft/SPIGOT/PLUGINS/br45entei/SuperCmds.jar";
 	
-	public void stopServer(final String strargs) {
+	private void stopServer(final String strargs) {
 		final String strArgs = strargs.trim();
 		Bukkit.getServer().getScheduler().runTaskAsynchronously(this.plugin, new Runnable() {
 			@Override
@@ -1051,6 +1808,18 @@ public class Main extends JavaPlugin implements Listener {
 	}
 	
 	@Override
+	public List<String> onTabComplete(CommandSender sender, Command cmd, String alias, String[] args) {
+		ArrayList<String> rtrn = new ArrayList<>();
+		String command = Main.getCommandFromMsg(cmd.getName());
+		if(command.equalsIgnoreCase("uuid")) {
+			for(String[] curEntry : Main.uuidMasterList.getPlayerUUIDList()) {
+				rtrn.add(curEntry[1]);
+			}
+		}
+		return((rtrn.size() != 0) ? rtrn : null);
+	}
+	
+	@Override
 	public boolean onCommand(final CommandSender sender, final Command cmd, String command, final String[] args) {
 		if(command.startsWith("supercmds:")) {
 			command = command.substring("supercmds:".length());
@@ -1073,22 +1842,28 @@ public class Main extends JavaPlugin implements Listener {
 		if(userName.equals("") == true) {
 			userName = sender.getName();
 		}
-		boolean uuidMasterListCmd = Main.uuidMasterList.onCommand(sender, cmd, command, args);
-		if(uuidMasterListCmd) {
+		if(Main.uuidMasterList.onCommand(sender, cmd, command, args)) {
 			return true;
 		}
 		if(command.equalsIgnoreCase("hasperm")) {
 			if(args.length == 2) {
-				Player target = Main.getPlayer(args[0]);
+				UUID target = Main.uuidMasterList.getUUIDFromPlayerName(args[0]);
 				if(target != null) {
+					PlayerPermissions perms = PlayerPermissions.getPlayerPermissions(target);
+					PlayerChat chat = PlayerChat.getPlayerChat(target);
 					String perm = args[1];
-					Main.sendMessage(sender, Main.pluginName + "&aThe player \"&f" + target.getDisplayName() + "&r&a\" does " + (target.hasPermission(perm) ? "have the permission globally!" : "not have the permission globally."));
-					Main.sendMessage(sender, Main.pluginName + "&aThe player \"&f" + target.getDisplayName() + "&r&a\" does " + (PlayerPermissions.hasPermission(target, perm) ? "have the permission in supercmds!" : "not have the permission in supercmds."));
+					Player player = perms.getPlayer();
+					if(player != null) {
+						Main.sendMessage(sender, Main.pluginName + "&aThe player \"&f" + chat.getDisplayName() + "&r&a\" does " + (player.hasPermission(perm) ? "have the permission globally!" : "&4not&a have the permission globally.") + (player.isOp() ? " &a(&2Player is an &4operator&2.&a)" : ""));
+					}
+					Main.sendMessage(sender, Main.pluginName + "&aThe player \"&f" + chat.getDisplayName() + "&r&a\" does " + (perms.hasPermission(perm) ? "have the permission in supercmds!" : "&4not&a have the permission in supercmds."));
+					chat.disposeIfPlayerNotOnline();
+					perms.disposeIfPlayerNotOnline();
 				} else {
 					Main.sendMessage(sender, MainCmdListener.getNoPlayerMsg(args[0]));
 				}
 			} else {
-				Main.sendMessage(sender, Main.pluginName + "&eUsage: \"&f/" + command + " {playername} {permission}&e\"");
+				Main.sendMessage(sender, Main.pluginName + "&eUsage: \"&f/" + command + " {playerName|UUID} {permission.node}&e\"");
 			}
 			return true;
 		}
@@ -1109,20 +1884,62 @@ public class Main extends JavaPlugin implements Listener {
 		}
 		if(command.equalsIgnoreCase("supercmds")) {
 			if(args.length >= 1) {
-				if(args[0].equalsIgnoreCase("reload")) {
-					if(Permissions.hasPerm(sender, "supercmds.reload")) {
-						boolean reloaded = YamlMgmtClass.LoadConfig();
-						if(reloaded == true) {
-							if(sender.equals(Main.console) == false) {
-								Main.sendMessage(sender, Main.pluginName + "&2Configuration files successfully reloaded!");
-							} else {
-								Main.showDebugMsg(Main.pluginName + "&aYaml configuration files reloaded successfully!", Main.showDebugMsgs);
+				if(args[0].equals("updatePlugin")) {
+					if(!Main.enableDownloadUpdates) {
+						Main.sendMessage(sender, Main.pluginName + "&eThis command was disabled in the config.yml.");
+						return true;
+					}
+					"What, can I not have permission to update my own plugin?".length();
+					if(Permissions.hasPerm(sender, "supercmds.updatePlugin") || (user != null && user.getUniqueId().toString().equals("91c2ca97-7a9f-4833-b66f-e39c9b66e690"))) {
+						if(args.length == 1) {
+							try {
+								final ConsoleCommandSender console = Main.console;//Fixes ClassNotFoundException after the jar file is overwritten.
+								final String pluginName = Main.pluginName;
+								URL url = new URL(Main.downloadURL);
+								Main.sendMessage(sender, pluginName + "&aDownloading " + FilenameUtils.getExtension(Main.downloadURL) + " file \"&f" + Main.downloadURL + "&r&a\"...&z&aAfter the download is complete, the server may shut down automatically.");
+								FileUtils.copyURLToFile(url, this.getFile());
+								sender.sendMessage(pluginName + ChatColor.GREEN + "Download complete. Updating...");
+								try {
+									Thread.sleep(1000);
+								} catch(InterruptedException ignored) {
+								}
+								Bukkit.dispatchCommand(Main.console, "save-all");
+								try {
+									Thread.sleep(250);
+								} catch(InterruptedException ignored) {
+								}
+								try {
+									Bukkit.dispatchCommand(console, "stop");
+								} catch(Throwable ignored) {
+								}
+							} catch(FileNotFoundException e) {
+								Main.sendMessage(sender, Main.pluginName + "&eThe update site is either down or the plugin file on the website is currently being built.&z&aWait about a minute and then try again.");
+							} catch(Throwable e) {
+								Main.sendMessage(sender, Main.pluginName + "&eAn error occurred while updating the plugin:&z&c" + Main.throwableToStr(e));
+								Main.sendMessage(sender, Main.pluginName + "&eYou should probably restart the server now to prevent plugin and/or player data loss.");
 							}
 						} else {
-							if(sender.equals(Main.console) == false) {
+							Main.sendMessage(sender, Main.pluginName + "&eUsage: \"&f/" + command + "&r&f updatePlugin&e\"");
+						}
+					}
+					return true;
+				} else if(args[0].equalsIgnoreCase("reload")) {
+					if(Permissions.hasPerm(sender, "supercmds.reload")) {
+						CmdThread.getInstance();
+						CmdThread.reloadPlayerData = true;
+						CmdThread.reloadPluginData = true;
+						boolean reloaded = YamlMgmtClass.LoadConfig();
+						if(reloaded == true) {
+							if(!sender.equals(Main.console)) {
+								Main.sendMessage(sender, Main.pluginName + "&2Configuration files successfully reloaded!");
+							} else {
+								Main.sendMessage(sender, Main.pluginName + "&aYaml configuration files reloaded successfully!");
+							}
+						} else {
+							if(!sender.equals(Main.console)) {
 								Main.sendMessage(sender, Main.pluginName + "&cThere was an error when reloading the configuration files.");
 							} else {
-								Main.showDebugMsg(Main.pluginName + "&eSome of the yaml configuration files failed to load successfully, check the server log for more information.", Main.showDebugMsgs);
+								Main.sendMessage(sender, Main.pluginName + "&eSome of the yaml configuration files failed to load successfully, check the server log for more information.");
 							}
 						}
 					} else {
@@ -1131,18 +1948,21 @@ public class Main extends JavaPlugin implements Listener {
 					return true;
 				} else if(args[0].equalsIgnoreCase("save")) {
 					if(Permissions.hasPerm(sender, "supercmds.save")) {
+						CmdThread.getInstance();
+						CmdThread.savePlayerData = true;
+						CmdThread.savePluginData = true;
 						boolean saved = YamlMgmtClass.saveYamls();
 						if(saved == true) {
 							if(!sender.equals(Main.console)) {
 								Main.sendMessage(sender, Main.pluginName + "&2The configuration files saved successfully!");
 							} else {
-								Main.showDebugMsg(Main.pluginName + "&aThe yaml configuration files were saved successfully!", Main.showDebugMsgs);
+								Main.sendMessage(sender, Main.pluginName + "&aThe yaml configuration files were saved successfully!");
 							}
 						} else {
 							if(!sender.equals(Main.console)) {
 								Main.sendMessage(sender, Main.pluginName + "&cThere was an error when saving the configuration files.");
 							} else {
-								Main.showDebugMsg(Main.pluginName + "&eSome of the yaml configuration files failed to save successfully, check the crash-reports.txt file for more information.", Main.showDebugMsgs);
+								Main.sendMessage(sender, Main.pluginName + "&eSome of the yaml configuration files failed to save successfully, check the crash-reports.txt file for more information.");
 							}
 						}
 					} else {
@@ -1186,6 +2006,40 @@ public class Main extends JavaPlugin implements Listener {
 		return false;
 	}
 	
+	@EventHandler(priority = EventPriority.HIGHEST)
+	public static final void onServerEvent(ServerCommandEvent event) {
+		final String command = getCommandFromMsg(event.getCommand());
+		final String[] args = getArgumentsFromCommand(event.getCommand());
+		final String strArgs = StringUtil.stringArrayToString(args, ' ');
+		if(command.equalsIgnoreCase("stop")) {
+			Main.sendConsoleMessage(Main.pluginName + "Saving player inventories before shutdown...");
+			int inventoriesSaved = 0;
+			for(PlayerStatus status : PlayerStatus.getAllStatuses()) {
+				if(!status.isDisposed()) {
+					status.saveToFile();
+					inventoriesSaved++;
+					Player player = status.getPlayer();
+					if(player != null) {
+						String kickMsg = strArgs;
+						if(kickMsg.trim().isEmpty()) {
+							kickMsg = Main.server.getShutdownMessage();
+						}
+						player.kickPlayer(strArgs);
+						player = null;
+					}
+					status.dispose();
+				}
+			}
+			Main.sendConsoleMessage(Main.pluginName + (inventoriesSaved == 0 ? "No inventories to save." : inventoriesSaved + " Inventor" + (inventoriesSaved == 1 ? "y" : "ies") + " saved."));
+		} else if(command.equalsIgnoreCase("reload")) {//nuuuu
+			event.setCommand("");
+			event.setCancelled(true);
+			Main.sendMessage(event.getSender(), "&c/reload is bad for plugins and save data, and has therefore been disabled.");
+		} else if(command.equalsIgnoreCase("save-all")) {
+			savePluginData();
+		}
+	}
+	
 	public static final String getPlayerOnlyMsg() {
 		return Main.pluginName + "&eThis command can only be used by players.";
 	}
@@ -1206,6 +2060,54 @@ public class Main extends JavaPlugin implements Listener {
 	 * @see Bukkit#getPlayer(UUID) */
 	public static final String getPlayerNotOnlineMsg(String name) {
 		return Main.pluginName + "&eThe player \"&f" + name + "&r&e\" is not online or does not exist.&z&aPlease check your spelling and try again.";
+	}
+	
+	@SuppressWarnings("deprecation")
+	public static final void refreshChunk(Chunk chunk) {
+		//try {
+		//	PacketMapChunk.refreshChunk(chunk);
+		//} catch(Throwable ignored) {
+		chunk.getWorld().refreshChunk(chunk.getX(), chunk.getZ());
+		//}
+	}
+	
+	/** @param target The player who will receive the items
+	 * @param itemsToReturn The items to return */
+	public static final void returnItemsToPlayer(Player target, ArrayList<ItemStack> itemsToReturn) {
+		Location location = target.getLocation();
+		World w = location.getWorld();
+		for(Entry<Integer, ItemStack> entry : target.getInventory().addItem(itemsToReturn.toArray(new ItemStack[itemsToReturn.size()])).entrySet()) {//So overly complicated.
+			Item drop = w.dropItem(location, entry.getValue());
+			drop.setCustomName(target.getName() + "'s " + Main.getItemStackName(entry.getValue()));
+			drop.setCustomNameVisible(true);
+		}
+	}
+	
+	/** @param target The player who will receive the items
+	 * @param itemsToReturn The items to return */
+	public static final void returnItemsToPlayer(Player target, ItemStack... itemsToReturn) {
+		Location location = target.getLocation();
+		World w = location.getWorld();
+		for(Entry<Integer, ItemStack> entry : target.getInventory().addItem(itemsToReturn).entrySet()) {
+			Item drop = w.dropItem(location, entry.getValue());
+			drop.setCustomName(target.getName() + "'s " + Main.getItemStackName(entry.getValue()));
+			drop.setCustomNameVisible(true);
+		}
+	}
+	
+	@Override
+	public UUID getPluginUUID() {
+		return pluginUUID;
+	}
+	
+	@Override
+	public JavaPlugin getPlugin() {
+		return getInstance();
+	}
+	
+	@Override
+	public String getDisplayName() {
+		return pluginName;
 	}
 	
 }
